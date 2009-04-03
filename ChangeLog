@@ -1,0 +1,225 @@
+New in 0.0.1
+------------
+ - initial release
+
+New in 0.0.2
+------------
+ - now the "mountpoint/workgroup/computer" is the symlink to 
+   "mountpoint/computer". This make the internal achitecture much simple.
+
+New in 0.0.3
+------------
+ - general redesign and cleanup
+
+New in 0.0.4
+------------
+ - rewrite a scanning of network tree, this fix various bug with refresh
+   of workgroup/computer lists.
+ - improve program behavior on network with buggy master browser.
+ - improve error handling
+ - some memory leak fixed
+
+New in 0.0.9a
+-------------
+ - more bug fix
+ - switch to context based work with samba (this fix a problem with
+   simultaneous access to share)
+ - added maximum samba context parameter
+
+New in 0.0.9b
+-------------
+ - improove copy files speed
+ - the work with smbc_context is optimized
+ - rewrited workgroup update
+
+New in 0.1.0-pre1
+-----------------
+ - project name was changed to SMBNetFs
+ - first public release
+ - rename project to avoid conflict with smbfs kernel module
+ - config file added
+ - max_read mount option can be avoid now
+
+New in 0.1.0-pre2
+-----------------
+ - remove QUERY_TYPE parameter to conform with smbclient-3.0.13
+ - fix stupid bug in charset conversion function
+
+New in 0.1.0-pre3
+-----------------
+ - some bug fixed
+ - use fuse-2.3-pre4
+
+New in 0.2.0-pre1
+-----------------
+ - added static group/host/link
+ - some bug fixed
+ - internal data storage rewrited
+
+New in 0.2.0-pre2
+-----------------
+ - fixed readdir bug (shares after IPC$ was not shown)
+
+New in 0.2.0-pre3
+-----------------
+ - Samba host/link/group storage redesigned
+ - Config file rereaded only if config file changed
+
+New in 0.2.0-pre4
+-----------------
+ - fixed bug in in samba host/link/group storage
+ - remember the contents of not auto-scanned group work again
+ - the long pause bug in films is partly fixed.
+
+New in 0.2.0-pre5
+-----------------
+ - fixed bug with user defined link
+
+New in 0.2.0-pre6
+-----------------
+ - fixed bug caused by dirent with empty name  
+
+New in 0.2.0-rc1
+-----------------
+ - use automake/autoconf for project building
+ - redesign samba context storage.
+ - fix a bug with network shares that have one user limit
+ - improove the starting of AutoRefresh and ConfigUpdate threads
+ - added new thread to preserve samba connection alive
+ - config file now readed before AutoRefresh thread starting.
+ - memory allocation/deallocation tuning
+
+New in 0.2.0-rc2
+-----------------
+ - truncate function was slightly improoved
+
+New in 0.2.0
+-----------------
+ - log file option now work properly
+ - range for memory allocation parameter changed
+
+New in 0.2.1
+-----------------
+ - large internal redesign to reduce the number of malloc/free calls
+ - new config paramaters: auth(replace username/password), netbios_name,
+   smb_open_files_max, buf_count_max
+ - samba-3.0.20 support
+ - better support of windows domains
+
+New in 0.2.2
+-----------------
+ - reimplement arrays throw the list of buffers
+ - remove annoying message in create/destroy buffer functions.
+ - new config paramaters: array_slice_max
+ - store information about original filename if conversion error occur
+ - improve samba context storage.
+
+New in 0.3.0
+-----------------
+ - amd64 fixes
+ - removed memory tuning from program and config file
+ - configuration file was renamed to "smbnetfs.conf" and moved to "~/.smb" dir
+ - configutation files can be included one to other
+ - configuration files rereaded every 5 min or by SIGHUP signal
+ - full support of "auth" directive in configuration file. now you can
+   specify different user/password to access different computer/share.
+ - possibility to hide/display shares with $ at end added.
+
+New in 0.3.1
+-----------------
+ - code optimization
+ - some minor bugs was fixed
+ - konqueror performance improved (see the kde_workaround config option)
+ - debug information levels was implemented
+ - documentation updated
+
+New in 0.3.2
+-----------------
+ - better iconv support
+ - better character conversion code
+ - fuse-2.5 compatible
+ - FreeBSD 6.0 compatible
+ - New config option: unsafe_truncate (see the description in the default
+   config file)
+
+New in 0.3.3
+-----------------
+ - rewind() problem fixed (reported by Andre Jonsson)
+ - fix stupid error in auth module
+ - some other error was fixed
+
+New in 0.3.4
+-----------------
+ - critical bug in context refresh related code was fixed
+ - bug in context refresh code was fixed
+ - tiny code improvements
+
+New in 0.3.5
+-----------------
+ - seious bug in auth module was fixed
+
+New in 0.3.6
+-----------------
+ - Kerberos support
+ - logging backtrace on crash (linux only)
+
+New in 0.3.7
+-----------------
+ - better LIST and SmbCtx implementation
+ - improve samba/locale conversion
+ - bugfixes
+
+New in 0.3.8
+-----------------
+ - better signal support
+ - remove "$" from function and variables name (should fix ARM compilation)
+ - use the same context for computer and its shares
+ - fix for bug 1629651 (Bad mtime in created files)
+ - fix for critical bug in auth module (affect SMBNetFS-0.3.7 only)
+ - umount filesystem properly on unrecoverable error
+ - new config option: free_space_blocks (should fix nautilus free space problem)
+ - small improvement & bugfixes
+
+New in 0.3.9
+-----------------
+  - new config option: fast_shutdown (smbnetfs should die without delay on umount)
+
+New in 0.3.10
+-----------------
+  - fix bug in samba/locale conversion appeared in smbnetfs-0.3.7
+
+New in 0.3.11
+-----------------
+  - minor memory leak was fixed
+  - recovering after read/write error was improved
+  - preparing to utf-8 migration
+
+New in 0.3.12
+-----------------
+  - drop old libfuse support (libfuse >= 2.5 is required)
+  - drop old libsmbclient support (libsmbclient >= 3.0.20 is required)
+  - update documentation
+  - added setxattr(), getxattr(), listxattr(), removexattr()
+  - fix difference in behavior between unix/libsmbclient implementation of
+    rename() and unlink() syscalls
+  - workaround for '@', '%', '/' and '\' symbols in filenames
+  - fix a linked list coruption on read/write error
+  - much small bugfixes
+
+New in 0.3.13
+-----------------
+  - samba 3.2.0 support
+  - safe truncate() support (samba >= 3.2.0 is required)
+  - 'array_slice_max', 'buf_count_max' and  'netbios_name' config parameters
+    were removed
+  - small refactoring
+  - bug fixes
+
+New in 0.5.0 (babushka)
+-----------------
+  - almost all code was revised
+  - samba >= 3.2 does not crash SMBNetFS anymore
+  - isolation of libsmbclient from the rest of SMBNetFS code (increase stability)
+  - rewrite of samba tree storage and authorization code (becomes faster)
+  - default password for the all hosts from some workgroup is supported now
+  - safe truncate() support (samba >= 3.2.0 is required)

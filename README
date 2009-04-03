@@ -1,0 +1,25 @@
+SMBNetFS is a Linux/FreeBSD filesystem that allow you to use samba/microsoft
+network in the same manner as the network neighborhood in Microsoft Windows.
+
+Features:
+ - Linux-2.6 supported (Linux-2.4 and FreeBSD >= 6.0 ???)
+ - you can use Samba/Microsoft network as a regular unix filesystem
+ - workgroup/computer/share entries are dynamically created
+ - windows domain supported
+ - user defined workgroup/link/hosts are supported
+ - national character supported
+ - in config files you can specify different user/password to access different
+   network shares
+ - you can access any computer in the world by "cd mountpoint/ip-addr"
+   command, where "ip-addr" is the IP address of the desired computer. Do not
+   warry that there is no file with such name :-)
+ - command "cd mountpoint/username:password@computer_or_ip" allows you to
+   access "computer_or_ip" as user "username" with password "password"
+   (this is insecure, but usefull) 
+ - the program is multithreaded, so simultaneous access to a file/share
+   is possible
+ - config files are reloaded every 5 min or by SIGHUP signal
+ - sources
+
+author
+Mikhail Kshevetskiy <Mikhail _dot_ Kshevetskiy _at_ gmail _dot_ com>

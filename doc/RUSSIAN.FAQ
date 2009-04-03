@@ -1,0 +1,148 @@
+Список вопросов:
+================
+Q1: Как насчет утечек памяти и ошибок в библиотеке libsmbclient ?
+Q2: Существуют ли аналогичные/похожие программы ?
+Q3: Как настроить корректную работу с файлами и шарами, названными по-русски ?
+Q4: KDE очень долго отображает список групп/компьютеров/шар. Что можно сделать ?
+Q5: У меня возникли проблемы, что делать ?
+
+ВОПРОСЫ И ОТВЕТЫ
+================
+
+Q1: Как насчет утечек памяти и ошибок в библиотеке libsmbclient ?
+
+A1: Начиная с SMBNetFS-0.5.0 вся работа с библиотекой libsmbclient вынесена
+    в отдельные процессы (которые могут быть сравнительно безопасно убиты).
+    Таким образом некорректная работа библиотеки libsmbclient не приводит
+    к каким либо неприятным последствиям.
+
+----------------------------------------------------------------------------
+
+Q2: Существуют ли аналогичные/похожие программы ?
+
+A2: Да, существуют.
+
+    1) fusesmb -- http://hannibal.lr-s.tudelft.nl/fusesmb/
+
+       SMB for FUSE is a Network Neighborhood (Samba shares) filesystem.
+       It works like smbfs, but instead of accessing one share at a time,
+       all computers and workgroups are accessible at once from a single
+       filesystem mount, making network browsing just as easy as it is on
+       Windows.
+
+    2) fusemb -- http://yarick.territory.ru/fusemb
+
+       fusemb is an SMB network Unix filesystem hierarchy interconnector 
+       using the fuse filesystem in user space.
+
+    3) smbc -- http://smbc.airm.net
+
+       Samba Commander is a text mode SMB network commander. In SMBC, you
+       can browse the local network or you can use the search function to
+       find the files. You can also download/upload files and directories
+       or create them both locally and remotely. SMBC has a resume function,
+       supports UTF-8 characters, and is multilingual.
+
+    4) xsmbrowser -- http://www.public.iastate.edu/~chadspen/
+
+       xSMBrowser is a tool for navigating SMB Networks (Samba, SMB, CIFS).
+       It retains the features of the program it was based upon (Microsoft's
+       Network Neighborhood), but adds convenient features for Unix users.
+       These include mounting, ability to change networks on-the-fly, and
+       conveniences such as a Stop Button.
+
+    5) smb4k -- http://smb4k.berlios.de/
+
+       Smb4K is a SMB/CIFS share browser for KDE. It uses the Samba software
+       suite to access the SMB/CIFS shares of the local network neighborhood.
+       Its purpose is to provide a program that's easy to use and has as many
+       features as possible.
+
+    6) KDE, GNOME, Xfce.
+
+----------------------------------------------------------------------------
+
+Q3: Как настроить корректную работу с файлами и шарами, названными по-русски ?
+
+A3: Вот краткая инструкция (слово LOCALE в тексте следует повсюду заменить на
+   используемую вами локальную кодировку).
+
+   (RECOMMENDED)
+   =============
+
+     1) Скопируйте файл "/etc/samba/smb.conf" в каталог "~/.smb". Если такого
+        каталога нет, то его нужно создать.
+
+	  mkdir -p ~/.smb
+	  cp /etc/samba/smb.conf ~/.smb/smb.conf
+
+     2) Измените в файле ~/.smb/smb.conf соответствующие строки на
+
+	  unix charset = utf-8
+	  display charset = utf-8
+	  dos charset = cp866
+
+        Если таких строк нет, их надо создать.
+
+     3) В файле ~/.smb/smbnetfs.conf должны содержаться следующие строки
+
+	  samba_charset  "utf-8"
+	  local_charset  "LOCALE"
+
+   --------------------------------------------------------------
+
+   (NOT RECOMMENDED)
+   =================
+
+     Можно предложить также и другой способ. В этом случае libsmbclient
+     будет работать в вашей локальной кодировке (это способ несколько хуже,
+     т.к. libsmbclient не будет понимать символы, не имеющие эквивалента в
+     вашей локальной кодировке)
+
+     1) Скопируйте файл "/etc/samba/smb.conf" в каталог "~/.smb". Если такого
+        каталога нет, то его нужно создать.
+
+	  mkdir -p ~/.smb
+	  cp /etc/samba/smb.conf ~/.smb/smb.conf
+
+     2) Измените в файле ~/.smb/smb.conf соответствующие строки на
+
+	  unix charset = LOCALE
+	  display charset = LOCALE
+	  dos charset = cp866
+
+        Если таких строк нет, их надо создать.
+
+     3) В файле ~/.smb/smbnetfs.conf должны содержаться следующие строки
+
+	  samba_charset  "LOCALE"
+	  local_charset  "LOCALE"
+
+----------------------------------------------------------------------------
+
+Q4: KDE очень долго отображает список групп/компьютеров/шар. Что можно сделать ?
+
+A4: Скорее всего проблемы вызваны тем, что KDE ищет подкаталог ".directory"
+    в текущем каталоге и во всех подкаталогах текущего каталога. В зависимости
+    от ситуации это приводит к опросу несуществующих компьютеров, опросу
+    несуществующих сетевых ресурсов или опросу всех сетевых ресурсов 
+    удаленной машины. Во многих случаях это вызывает длительные задержки.
+
+    Чтобы избавиться от таких задержек установите опцию конфигурационного
+    файла kde_workaround в значение 3. Чтобы полностью исключить опрос
+    подкаталогов ".directory", установите kde_workaround = -1.
+
+---------------------------------------------------------------------------
+
+Q5: У меня возникли проблемы, что делать ?
+
+A5: Часто причиной ошибок являются плохо (неправильно) сконфигурированная
+    samba и/или неправильно настроенный SMBNetFs. Для того чтобы понять
+    причину ошибки, установите опцию конфигурационного файла smbnetfs_debug
+    в значение 5 или 6 и запустите smbnetfs с дополнительной опцией "-d".
+    Повторите Ваши действия с целью воспроизвести ошибку. Проанализируйте
+    отладочную информацию и постарайтесь устранить ошибку самостоятельно.
+    Если у Вас не получилось или Вы не смогли разобраться в полученной
+    информации, попробуйте связаться с автором программы.
+
+---------------------------------------------------------------------------

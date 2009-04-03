@@ -1,0 +1,111 @@
+AC_INIT([SMBNetFS],[0.5.0])
+AM_INIT_AUTOMAKE
+AC_CONFIG_HEADERS([src/config.h])
+AC_PROG_CC
+
+AC_CHECK_FUNCS([setxattr])
+AC_CHECK_FUNC(backtrace_symbols_fd,
+    [AC_DEFINE([HAVE_BACKTRACE], [], [Linux])]
+)
+AC_CHECK_FUNC(setlocale, [found_setlocale=yes])
+if test "x$found_setlocale" != "xyes" ; then
+    AC_MSG_ERROR([*** No setlocale() implementation found in C library])
+fi
+
+dnl ***********************
+dnl *** Tests for iconv ***
+dnl ***********************
+
+AC_ARG_WITH(libiconv,
+    [AS_HELP_STRING(--with-libiconv=@<:@no/gnu/native@:>@,
+	use the libiconv library)],
+    ,
+    [with_libiconv=maybe])
+
+found_iconv=no
+case $with_libiconv in
+    maybe)
+	# Check in the C library first
+	AC_CHECK_FUNC(iconv_open, [with_libiconv=no; found_iconv=yes])
+
+	# Check if we have GNU libiconv
+	if test $found_iconv = "no"; then
+	    AC_CHECK_LIB(iconv, libiconv_open, 
+		[with_libiconv=gnu; found_iconv=yes])
+	fi
+
+	# Check if we have a iconv in -liconv, possibly from vendor
+	if test $found_iconv = "no"; then
+	    AC_CHECK_LIB(iconv, iconv_open, 
+		[with_libiconv=native; found_iconv=yes])
+	fi
+	;;
+    no)
+	AC_CHECK_FUNC(iconv_open, [with_libiconv=no; found_iconv=yes])
+        ;;
+    gnu|yes)
+	AC_CHECK_LIB(iconv, libiconv_open, 
+	    [with_libiconv=gnu; found_iconv=yes])
+	;;
+    native)
+	AC_CHECK_LIB(iconv, iconv_open, 
+	    [with_libiconv=native; found_iconv=yes])
+	;;
+esac
+
+if test "x$found_iconv" = "xno" ; then
+    AC_MSG_ERROR([*** No iconv() implementation found in C library or libiconv])
+fi
+
+case $with_libiconv in
+    gnu)
+	AC_DEFINE(USE_LIBICONV_GNU, 1, [Using GNU libiconv])
+	;;
+    native)
+	AC_DEFINE(USE_LIBICONV_NATIVE, 1, 
+	    [Using a native implementation of iconv in a separate library])
+	;;
+esac
+
+dnl **********************
+dnl *** Tests for fuse ***
+dnl **********************
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+#export PKG_CONFIG_PATH=/tmp/s/test/fuse/lib/pkgconfig:$PKG_CONFIG_PATH
+
+PKG_CHECK_MODULES(FUSE, [fuse >= 2.6])
+FUSE_CFLAGS="$CFLAGS -Wall -W -D_REENTRANT $FUSE_CFLAGS"
+LIBS="$LIBS $FUSE_LIBS"
+LDFLAGS="$LDFLAGS -rdynamic"
+CFLAGS="$FUSE_CFLAGS -DFUSE_USE_VERSION=26"
+
+dnl ******************************
+dnl *** Tests for libsmbclient ***
+dnl ******************************
+
+#LIBS="/tmp/s/test/libsmbclient.a $FUSE_LIBS -lc -lcrypt -lresolv -lnsl -ldl"
+
+AC_CHECK_LIB(smbclient, smbc_new_context, [], [
+	echo "Error!!! libsmbclient >= 3.0.20 required."
+	exit 1
+])
+
+AC_CHECK_LIB(smbclient, smbc_setOptionUserData, 
+    [AC_DEFINE(HAVE_LIBSMBCLIENT_3_2, 1, [Using Samba-3.2 api])],
+    [AC_CHECK_MEMBER(SMBCCTX.close_fn, [], 
+	[echo "Error!!! libsmbclient >= 3.0.20 required."; exit 1],
+	[#include <libsmbclient.h>]
+    )]
+)
+
+dnl ******************
+dnl *** Final step ***
+dnl ******************
+
+AC_CONFIG_FILES([Makefile src/Makefile])
+AC_OUTPUT
+
+echo ""
+echo "  Do not use old libsmbclient version, libsmbclient >= 3.2.0 is recommended."
+echo ""
