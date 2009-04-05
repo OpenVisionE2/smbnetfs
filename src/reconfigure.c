@@ -27,7 +27,7 @@ enum config_read_mode{
     QUOTED
 };
 
-const char	*config_dir_posfix	= "/.smb/";
+const char	*config_dir_postfix	= "/.smb/";
 char		config_dir[2048]	= "/";
 const char	config_file[1024]	= "smbnetfs.conf";
 
@@ -48,8 +48,8 @@ void reconfigure_set_config_dir(const char *path){
 	"WARNING!!! Configuration directory ~%s is not found. Please create it.\n"
 	"This directory should contain at least two files: smb.conf and smbnetfs.conf.\n"
 	"You may copy smb.conf from the /etc/samba directory. You can find a sample of\n"
-	"smbnetfs.conf in the doc directory of original SMBNetFs distribution.\n\n"
-	"Using default settings for now.\n", config_dir_posfix);
+	"smbnetfs.conf in the doc directory of original SMBNetFS distribution.\n\n"
+	"Using default settings for now.\n", config_dir_postfix);
 }
 
 int reconfigure_get_number(char *value, int *result){

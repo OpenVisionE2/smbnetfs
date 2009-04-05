@@ -99,7 +99,7 @@ void set_default_login_and_configdir(void){
 	setenv("HOME", home, 1);
     }
 
-    dir = config_dir_posfix;
+    dir = config_dir_postfix;
     if (strlen(home) + strlen(dir) + 1 > sizeof(buf)) home = "/";
     strcpy(buf, home);
     strcat(buf, (home[strlen(home) - 1] == '/') ? dir + 1 : dir);
