@@ -201,7 +201,7 @@ void event_scan_smb_tree(void){
     int			i;
     struct smbitem	*dir;
 
-    event_scan_smb_root();
+    if (event_get_query_browser_flag()) event_scan_smb_root();
     dir = smbitem_get_samba_groups();
     for(i = 0; i < dir->child_cnt; i++){
 	if (dir->childs[i]->type != SMBITEM_GROUP) continue;
