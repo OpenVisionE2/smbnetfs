@@ -14,6 +14,8 @@
 #include "smb_conn_proto.h"
 #include "smb_conn_srv.h"
 
+#define	DPRINTF(level, fmt, args...)	{ printf("srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stdout); }
+
 #ifndef HAVE_LIBSMBCLIENT_3_2
     #define	smbc_setDebug(ctx, level)				\
 	((ctx)->debug = (level))
@@ -135,13 +137,13 @@ void smb_conn_srv_auth_fn(SMBCCTX *ctx,
     }
     strncpy(user,   username, userlen); user[userlen - 1] = '\0';
     strncpy(passwd, password, passwdlen); passwd[passwdlen - 1] = '\0';
-    printf("smb_auth_fn(smb://%s/%s): grp=%s, user=%s, passwd=%s\n",
+    DPRINTF(0, "url=smb://%s/%s, grp=%s, user=%s, passwd=%s\n",
 			server, share, wrkgrp, user, "********");
     free((char *) server);
     return;
 
   error:
-    printf("smb_auth_fn failed\n"); fflush(stderr);
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -177,6 +179,7 @@ void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -223,10 +226,11 @@ void smb_conn_srv_listen(struct smb_conn_srv_ctx *ctx){
 	if (query_len != (ssize_t) query_hdr->query_len) goto error;
 
 	/* process query */
+	errno = 0;
 	query = (void*) (query_hdr + 1);
 	query_len -= sizeof(struct smb_conn_query_hdr);
-	printf("srv(%d): process query=%d, query_len=%d\n",
-	    getpid(), query_hdr->query_cmd, (int)query_len);
+	DPRINTF(0, "process query=%d, query_len=%d\n",
+			query_hdr->query_cmd, (int) query_len);
 	switch(query_hdr->query_cmd){
 	    case OPEN:
 		smb_conn_srv_open(ctx, query, query_len);
@@ -298,6 +302,7 @@ void smb_conn_srv_listen(struct smb_conn_srv_ctx *ctx){
     }
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 };
 
@@ -339,6 +344,7 @@ void smb_conn_srv_send_reply(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -397,6 +403,7 @@ void smb_conn_srv_open(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -455,6 +462,7 @@ void smb_conn_srv_creat(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -500,6 +508,7 @@ void smb_conn_srv_read(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -547,6 +556,7 @@ void smb_conn_srv_write(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -576,6 +586,7 @@ void smb_conn_srv_close(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -657,6 +668,7 @@ void smb_conn_srv_unlink(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -856,6 +868,7 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -903,6 +916,7 @@ void smb_conn_srv_opendir(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -924,6 +938,7 @@ void smb_conn_srv_closedir(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -975,6 +990,7 @@ void smb_conn_srv_readdir(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1013,6 +1029,7 @@ void smb_conn_srv_mkdir(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1052,6 +1069,7 @@ void smb_conn_srv_rmdir(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1087,6 +1105,7 @@ void smb_conn_srv_stat(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1121,6 +1140,7 @@ void smb_conn_srv_fstat(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1162,6 +1182,7 @@ void smb_conn_srv_ftruncate(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1199,6 +1220,7 @@ void smb_conn_srv_chmod(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1232,6 +1254,7 @@ void smb_conn_srv_utimes(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1279,6 +1302,7 @@ void smb_conn_srv_setxattr(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1326,6 +1350,7 @@ void smb_conn_srv_getxattr(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1366,6 +1391,7 @@ void smb_conn_srv_listxattr(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
 
@@ -1410,5 +1436,6 @@ void smb_conn_srv_removexattr(struct smb_conn_srv_ctx *ctx,
     return;
 
   error:
+    DPRINTF(0, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
