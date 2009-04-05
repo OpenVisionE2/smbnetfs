@@ -1280,6 +1280,7 @@ void smb_conn_srv_setxattr(struct smb_conn_srv_ctx *ctx,
 
     if (smbc_setxattr(url, name, ctx->shmem_ptr, query->bufsize, query->flags) < 0){
 	switch(errno){
+	    case EINVAL:
 	    case EEXIST:
 	    case ENOATTR:
 	    case EPERM:
@@ -1328,6 +1329,7 @@ void smb_conn_srv_getxattr(struct smb_conn_srv_ctx *ctx,
 
     if (smbc_getxattr(url, name, ctx->shmem_ptr, query->bufsize) < 0){
 	switch(errno){
+	    case EINVAL:
 	    case EEXIST:
 	    case ENOATTR:
 	    case EPERM:
