@@ -663,7 +663,7 @@ int smbitem_get_group(const char *host, char *buf, size_t size){
 
     if (host == NULL) return -1;
 
-    DPRINTF(6, "host=%s\n", host);
+    DPRINTF(6, "group=%s\n", host);
 
     while(*host == '/') host++;
     if (*host == '\0') return -1;
