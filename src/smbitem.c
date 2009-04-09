@@ -607,6 +607,21 @@ enum smbitem_path_t smbitem_what_is(const char *path){
     return SMBITEM_UNKNOWN;
 }
 
+int smbitem_is_name_exist(const char *name){
+    int			pos;
+
+    if ((name == NULL) || (*name == '\0')) return 0;
+    pthread_mutex_lock(&m_smbitem);
+	/* find dir in user configured tree */
+	pos = smbitem_find_in_group(trees.user, name, 0);
+	if (pos < 0){
+	    /* find dir in samba scanned tree */
+	    pos = smbitem_find_in_group(trees.samba, name, 0);
+	}
+    pthread_mutex_unlock(&m_smbitem);
+    return (pos >= 0);
+}
+
 int smbitem_readlink(const char *path, char *buf, size_t size){
     int			pos;
     struct smbitem	*dir, *tmp_dir;

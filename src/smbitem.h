@@ -63,6 +63,7 @@ void                smbitem_delete_obsolete(time_t threshold,
 				enum smbitem_tree_t tree);
 
 enum smbitem_path_t smbitem_what_is(const char *path);
+int                 smbitem_is_name_exist(const char *name);
 int                 smbitem_readlink(const char *path, char *buf, size_t size);
 int                 smbitem_get_group(const char *host, char *buf, size_t size);
 

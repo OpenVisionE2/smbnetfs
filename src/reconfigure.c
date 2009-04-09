@@ -308,9 +308,9 @@ int reconfigure_read_config_file(const char *filename, int startup){
 	    if (strcasecmp(arg[0], "show_hidden_hosts") == 0)
 		if (reconfigure_set_boolean(arg[1],
 				function_set_hidden_hosts_visibility)) continue;
-	    if (strcasecmp(arg[0], "kde_workaround_depth") == 0)
+	    if (strcasecmp(arg[0], "stat_workaround_depth") == 0)
 		if (reconfigure_set_number(arg[1],
-				function_set_kde_workaround_depth)) continue;
+				function_set_stat_workaround_depth)) continue;
 	}
 	if ((cnt >= 3) && (cnt <= 4) && (strcasecmp(arg[0], "auth") == 0)){
 	    char	*comp, *share;

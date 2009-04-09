@@ -23,7 +23,14 @@ size_t		function_free_space_size	= 0;
 int		function_quiet_flag		= 1;
 int		function_show_dollar_shares	= 0;
 int		function_show_hidden_hosts	= 0;
-int		function_kde_workaround_depth	= 3;
+int		function_stat_workaround_depth	= 3;
+
+const char	*function_stat_workaround_names[] = {
+				".directory",
+				".git",
+				"HEAD",
+				NULL
+		};
 
 pthread_mutex_t	m_function		= PTHREAD_MUTEX_INITIALIZER;
 
@@ -99,40 +106,46 @@ int function_get_hidden_hosts_visibility(void){
     return flag;
 }
 
-int function_set_kde_workaround_depth(int depth){
+int function_set_stat_workaround_depth(int depth){
     if (depth < -1) return 0;
     DPRINTF(7, "depth=%d\n", depth);
     pthread_mutex_lock(&m_function);
-    function_kde_workaround_depth = depth;
+    function_stat_workaround_depth = depth;
     pthread_mutex_unlock(&m_function);
     return 1;
 }
 
-int function_get_kde_workaround_depth(void){
+int function_get_stat_workaround_depth(void){
     int depth;
 
     pthread_mutex_lock(&m_function);
-    depth = function_kde_workaround_depth;
+    depth = function_stat_workaround_depth;
     pthread_mutex_unlock(&m_function);
     DPRINTF(7, "depth=%d\n", depth);
     return depth;
 }
 
-int function_is_kde_workaround(const char *path){
-    const char		*kde_dir_name = ".directory";
-    const ssize_t	kde_dir_len = strlen(kde_dir_name);
-    int			i, depth = function_get_kde_workaround_depth();
-    const char		*path_end;
+int function_is_stat_workaround(const char *path){
+    const char		**dir, *path_start, *path_end;
+    int			i, depth;
+    ssize_t		dir_len;
 
-    for(i = 0; (i < depth) || (depth == -1); i++){
-	while(*path == '/') path++;
-	if (*path == '\0') break;
+    depth = function_get_stat_workaround_depth();
+    for(dir = function_stat_workaround_names; *dir != NULL; dir++){
+	if (smbitem_is_name_exist(*dir)) continue;
 
-	path_end = path;
-	while((*path_end != '/') && (*path_end != '\0')) path_end++;
-	if ((path_end - path == kde_dir_len) &&
-	    (strncmp(path, kde_dir_name, kde_dir_len) == 0)) return 1;
-	path = path_end;
+	path_start = path;
+	dir_len = strlen(*dir);
+	for(i = 0; (i < depth) || (depth == -1); i++){
+	    while(*path_start == '/') path_start++;
+	    if (*path_start == '\0') break;
+
+	    path_end = path_start;
+	    while((*path_end != '/') && (*path_end != '\0')) path_end++;
+	    if ((path_end - path_start == dir_len) &&
+		(strncmp(path_start, *dir, dir_len) == 0)) return 1;
+	    path_start = path_end;
+	}
     }
     return 0;
 }
@@ -413,7 +426,7 @@ static int function_stat(const char *path, struct stat *stbuf){
     char		buf[2048];
 
     DPRINTF(5, "(%s)\n", path);
-    if (function_is_kde_workaround(path)) return -ENOENT;
+    if (function_is_stat_workaround(path)) return -ENOENT;
     switch(smbitem_what_is(path)){
 	case SMBITEM_SMBNETFS_DIR:
 	    while(*path == '/') path++;
