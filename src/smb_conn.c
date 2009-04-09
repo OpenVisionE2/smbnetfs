@@ -1031,7 +1031,7 @@ int smb_conn_utimes(struct smb_conn_ctx *ctx, const char *url, struct timeval *t
     struct smb_conn_utimes_query	query;
 
     query.url_offs = sizeof(struct smb_conn_utimes_query);
-    memcpy(&query.tbuf, tbuf, sizeof(struct timeval));
+    memcpy(&query.tbuf, tbuf, 2 * sizeof(struct timeval));
 
     pthread_mutex_lock(&ctx->mutex);
     ctx->access_time = time(NULL);

@@ -80,7 +80,7 @@ struct smb_conn_rename_query{
 /* UTIMES */
 struct smb_conn_utimes_query{
     size_t			url_offs;
-    struct timeval		tbuf;
+    struct timeval		tbuf[2];
 };
 
 /* CLOSE, CLOSEDIR, FSTAT */

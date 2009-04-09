@@ -1237,7 +1237,7 @@ void smb_conn_srv_utimes(struct smb_conn_srv_ctx *ctx,
     if (query_len != sizeof(struct smb_conn_utimes_query) + strlen(url) + 1) goto error;
     if ((url = charset_local2smb(url)) == NULL) goto error;
 
-    if (smbc_utimes(url, &query->tbuf) < 0){
+    if (smbc_utimes(url, query->tbuf) < 0){
 	switch(errno){
 	    case EACCES:
 	    case ENOENT:
