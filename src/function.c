@@ -150,6 +150,11 @@ int function_is_stat_workaround(const char *path){
     return 0;
 }
 
+inline int function_check_xattr_name(const char *name){
+    static char	*xattr_name = "system.nt_sec_desc.";
+    return (strncmp(name, xattr_name, strlen(xattr_name)) == 0);
+}
+
 inline samba_fd function_get_fd(struct fuse_file_info *fi){
     return (samba_fd) fi->fh;
 }
@@ -567,7 +572,8 @@ static int function_setxattr(const char *path, const char *name,
 			    const char *value, size_t size, int flags){
     DPRINTF(5, "(%s, name=%s, value=%s, size=%d, flags=%o)\n", path,
 	name, value, (int) size, flags);
-    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -EINVAL;
+    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
+    if (!function_check_xattr_name(name)) return -ENOTSUP;
     if (samba_setxattr(path, name, value, size, flags) != 0) return -errno;
     return 0;
 }
@@ -576,7 +582,8 @@ static int function_setxattr(const char *path, const char *name,
 static int function_getxattr(const char *path, const char *name,
 			    char *value, size_t size){
     DPRINTF(5, "(%s, name=%s, size=%d)\n", path, name, (int) size);
-    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -EINVAL;
+    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
+    if (!function_check_xattr_name(name)) return -ENOTSUP;
     if (samba_getxattr(path, name, value, size) != 0) return -errno;
     return 0;
 }
@@ -584,7 +591,7 @@ static int function_getxattr(const char *path, const char *name,
 /* libfuse does not support llistxattr() and flistxattr(), but samba does */
 static int function_listxattr(const char *path, char *list, size_t size){
     DPRINTF(5, "(%s, size=%d)\n", path, (int) size);
-    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -EINVAL;
+    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
     if (samba_listxattr(path, list, size) != 0) return -errno;
     return 0;
 }
@@ -592,7 +599,8 @@ static int function_listxattr(const char *path, char *list, size_t size){
 /* libfuse does not support lremovexattr() and fremovexattr(), but samba does */
 static int function_removexattr(const char *path, const char *name){
     DPRINTF(5, "(%s, name=%s)\n", path, name);
-    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -EINVAL;
+    if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
+    if (!function_check_xattr_name(name)) return -ENOTSUP;
     if (samba_removexattr(path, name) != 0) return -errno;
     return 0;
 }
