@@ -718,6 +718,7 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
     }
 
     error = 0;
+    if (strcasecmp(new_url, old_url) == 0) goto rename;
 
     /* check the presence of old_url */
     if (smbc_stat(old_url, &old_st) < 0){
