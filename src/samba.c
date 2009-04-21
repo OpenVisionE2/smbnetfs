@@ -312,14 +312,16 @@ ssize_t samba_write(samba_fd fd, off_t offset, void *buf, size_t bufsize){
 
 int samba_close(samba_fd fd){
     int			error, result;
+    struct smb_conn_ctx	*ctx;
 
     if ((fd == NULL) || (fd->ctx == NULL)){
 	errno = EINVAL;
 	return -1;
     }
-    result = smb_conn_close(fd->ctx, fd);
+    ctx = fd->ctx;
+    result = smb_conn_close(ctx, fd);
     error = errno;
-    if (result == 0) samba_release_ctx(smb_conn_ctx_to_samba_ctx(fd->ctx));
+    if (result == 0) samba_release_ctx(smb_conn_ctx_to_samba_ctx(ctx));
     errno = error;
     return result;
 }
@@ -372,14 +374,16 @@ samba_fd samba_opendir(const char *url){
 
 int samba_closedir(samba_fd fd){
     int			error, result;
+    struct smb_conn_ctx	*ctx;
 
     if ((fd == NULL) || (fd->ctx == NULL)){
 	errno = EINVAL;
 	return -1;
     }
-    result = smb_conn_closedir(fd->ctx, fd);
+    ctx = fd->ctx;
+    result = smb_conn_closedir(ctx, fd);
     error = errno;
-    if (result == 0) samba_release_ctx(smb_conn_ctx_to_samba_ctx(fd->ctx));
+    if (result == 0) samba_release_ctx(smb_conn_ctx_to_samba_ctx(ctx));
     errno = error;
     return result;
 }
