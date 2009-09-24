@@ -140,8 +140,6 @@ int main(int argc, char *argv[]){
 	fprintf(stderr, "Can't parse command line, please verify it.\n");
 	exit(EXIT_FAILURE);
     }
-    printf("args.argc=%d\nBye!\n", args.argc);
-    exit(0);
 
     if (!special_config){
 	/* read default config file */
