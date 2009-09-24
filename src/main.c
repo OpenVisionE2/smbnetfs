@@ -73,39 +73,6 @@ void set_signal_reactions(void){
     }
 }
 
-void set_default_login_and_configdir(void){
-    char			buf[1024];
-    register struct passwd	*pwd;
-    const char			*home, *user, *dir;
-
-    pwd = getpwuid(getuid());
-
-    user = getenv("USER");
-    if ((user == NULL) || (*user == '\0')) user = getenv("LOGNAME");
-    if ((user == NULL) || (*user == '\0')){
-	user = ((pwd != NULL) && 
-	        (pwd->pw_name != NULL) &&
-	        (pwd->pw_name != '\0')) ? pwd->pw_name : "anonymous";
-	setenv("USER", user, 1);
-	setenv("LOGNAME", user, 1);
-    }
-    auth_set_default_login_name(user);
-
-    home = getenv("HOME");
-    if ((home == NULL) || (*home != '/')){
-	home = ((pwd != NULL) && 
-	        (pwd->pw_dir  != NULL) &&
-	        (*pwd->pw_dir == '/')) ? pwd->pw_dir : "/";
-	setenv("HOME", home, 1);
-    }
-
-    dir = config_dir_postfix;
-    if (strlen(home) + strlen(dir) + 1 > sizeof(buf)) home = "/";
-    strcpy(buf, home);
-    strcat(buf, (home[strlen(home) - 1] == '/') ? dir + 1 : dir);
-    reconfigure_set_config_dir(buf);
-}
-
 int main(int argc, char *argv[]){
     setlocale(LC_ALL, "");
     check_samba_version();

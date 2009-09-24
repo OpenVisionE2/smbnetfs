@@ -6,6 +6,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <pwd.h>
 
 #include "common.h"
 #include "smbitem.h"
@@ -28,8 +29,8 @@ enum config_read_mode{
 };
 
 const char	*config_dir_postfix	= "/.smb/";
+const char	*config_file		= "smbnetfs.conf";
 char		config_dir[2048]	= "/";
-const char	config_file[1024]	= "smbnetfs.conf";
 
 void reconfigure_set_config_dir(const char *path){
     struct stat buf;
@@ -50,6 +51,39 @@ void reconfigure_set_config_dir(const char *path){
 	"You may copy smb.conf from the /etc/samba directory. You can find a sample of\n"
 	"smbnetfs.conf in the doc directory of original SMBNetFS distribution.\n\n"
 	"Using default settings for now.\n", config_dir_postfix);
+}
+
+void set_default_login_and_configdir(void){
+    char			buf[1024];
+    register struct passwd	*pwd;
+    const char			*home, *user, *dir;
+
+    pwd = getpwuid(getuid());
+
+    user = getenv("USER");
+    if ((user == NULL) || (*user == '\0')) user = getenv("LOGNAME");
+    if ((user == NULL) || (*user == '\0')){
+	user = ((pwd != NULL) && 
+	        (pwd->pw_name != NULL) &&
+	        (pwd->pw_name != '\0')) ? pwd->pw_name : "anonymous";
+	setenv("USER", user, 1);
+	setenv("LOGNAME", user, 1);
+    }
+    auth_set_default_login_name(user);
+
+    home = getenv("HOME");
+    if ((home == NULL) || (*home != '/')){
+	home = ((pwd != NULL) && 
+	        (pwd->pw_dir  != NULL) &&
+	        (*pwd->pw_dir == '/')) ? pwd->pw_dir : "/";
+	setenv("HOME", home, 1);
+    }
+
+    dir = config_dir_postfix;
+    if (strlen(home) + strlen(dir) + 1 > sizeof(buf)) home = "/";
+    strcpy(buf, home);
+    strcat(buf, (home[strlen(home) - 1] == '/') ? dir + 1 : dir);
+    reconfigure_set_config_dir(buf);
 }
 
 int reconfigure_get_number(char *value, int *result){
