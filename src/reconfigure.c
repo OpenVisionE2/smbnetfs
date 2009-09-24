@@ -28,9 +28,35 @@ enum config_read_mode{
     QUOTED
 };
 
-const char	*config_dir_postfix	= "/.smb/";
-const char	*config_file		= "smbnetfs.conf";
+int		special_config		= 0;
+const char	*config_dir_postfix	= "/.smb";
+const char	config_file[256]	= "smbnetfs.conf";
 char		config_dir[2048]	= "/";
+
+const char *smbnetfs_option_list =
+	"    -o config=PATH               path to config (~/.smb/smbnetfs.conf)\n"
+	"    -o smbnetfs_debug=N          SMBNetFS debug level (N<=10)\n"
+	"    -o smb_debug_level=N         Samba debug level (N<=10)\n"
+	"    -o log_file=PATH             File to store SMBNetFS debug messages\n"
+	"    -o local_charset=CHARSET     Local charset (autodetected)\n"
+	"    -o samba_charset=CHARSET     Charset used by samba (utf-8)\n"
+	"    -o max_rw_block_size=N       Maximum size of r/w block in Kb (autodetected)\n"
+	"    -o smb_tree_scan_period=T    Period of scanning samba network tree (300s)\n"
+	"    -o smb_tree_elements_ttl=T   TTL of scanned elements in samba tree (900s)\n"
+	"    -o smb_query_browsers=BOOL   Enable/disable scanning of samba tree (on)\n"
+	"    -o show_$_shares=BOOL        Enable/disable showing of hidden shares (off)\n"
+	"    -o show_hidden_hosts=BOOL    See in documentation (off)\n"
+	"    -o free_space_size=N         Free space size in pages (0)\n"
+	"    -o quiet_flag=BOOL           Do not fail on chown/chgroup (on)\n"
+	"    -o stat_workaround_depth=N   konquerror and gnome termal hack (3)\n"
+	"    -o time_step=T               Scheduler sleep interval (10s)\n"
+	"    -o config_update_period=T    Configuration update interval (300s)\n"
+	"    -o max_ctx_count=N           Maximum number of childs (15)\n"
+	"    -o max_retry_count=N         Number of retries before fail (3)\n"
+	"    -o listen_timeout=T          Child process inactivity timeout (300s)\n"
+	"    -o reply_timeout=T           Child process reply timeout (30s)\n"
+	"    -o max_passwd_query_count=N  See in documentation (10)\n";
+
 
 void reconfigure_set_config_dir(const char *path){
     struct stat buf;
@@ -53,7 +79,7 @@ void reconfigure_set_config_dir(const char *path){
 	"Using default settings for now.\n", config_dir_postfix);
 }
 
-void set_default_login_and_configdir(void){
+void reconfigure_set_default_login_and_configdir(void){
     char			buf[1024];
     register struct passwd	*pwd;
     const char			*home, *user, *dir;
@@ -212,6 +238,177 @@ int reconfigure_split_line(const char *line,
     return -1;
 }
 
+int reconfigure_analyse_simple_option(const char *option, char *value, int startup){
+    /* common.h */
+    if (strcasecmp(option, "smbnetfs_debug") == 0)
+	return reconfigure_set_number(value, common_set_smbnetfs_debug_level);
+    if (strcasecmp(option, "log_file") == 0)
+        return common_set_log_file(value);
+
+    /* process.h */
+    if (strcasecmp(option, "listen_timeout") == 0)
+	return reconfigure_set_number(value, process_set_server_listen_timeout);
+    if (strcasecmp(option, "smb_debug_level") == 0)
+	return reconfigure_set_number(value, process_set_server_smb_debug_level);
+    if (strcasecmp(option, "local_charset") == 0)
+	return process_set_server_local_charset(value);
+    if (strcasecmp(option, "samba_charset") == 0)
+	return process_set_server_samba_charset(value);
+
+    /* smb_conn.h */
+    if (strcasecmp(option, "max_retry_count") == 0)
+	return reconfigure_set_number(value, smb_conn_set_max_retry_count);
+    if (strcasecmp(option, "max_passwd_query_count") == 0)
+	return reconfigure_set_number(value, smb_conn_set_max_passwd_query_count);
+    if (strcasecmp(option, "reply_timeout") == 0)
+	return reconfigure_set_number(value, smb_conn_set_server_reply_timeout);
+
+    /* samba.h */
+    if (strcasecmp(option, "max_rw_block_size") == 0){
+	if (!startup) return 1;		/* ignore this option*/
+	return reconfigure_set_kb_size(value, samba_init);
+    }
+    if (strcasecmp(option, "max_ctx_count") == 0)
+	return reconfigure_set_number(value, samba_set_max_ctx_count);
+
+    /* event.h */
+    if (strcasecmp(option, "time_step") == 0)
+	return reconfigure_set_number(value, event_set_time_step);
+    if (strcasecmp(option, "smb_tree_scan_period") == 0)
+	return reconfigure_set_number(value, event_set_smb_tree_scan_period);
+    if (strcasecmp(option, "smb_tree_elements_ttl") == 0)
+	return reconfigure_set_number(value, event_set_smb_tree_elements_ttl);
+    if (strcasecmp(option, "config_update_period") == 0)
+	return reconfigure_set_number(value, event_set_config_update_period);
+    if (strcasecmp(option, "smb_query_browsers") == 0)
+	return reconfigure_set_boolean(value, event_set_query_browser_flag);
+
+    /* function.h */
+    if (strcasecmp(option, "free_space_size") == 0)
+	return reconfigure_set_size(value, function_set_free_space_size);
+    if (strcasecmp(option, "quiet_flag") == 0)
+	return reconfigure_set_boolean(value, function_set_quiet_flag);
+    if (strcasecmp(option, "show_$_shares") == 0)
+	return reconfigure_set_boolean(value, function_set_dollar_share_visibility);
+    if (strcasecmp(option, "show_hidden_hosts") == 0)
+	return reconfigure_set_boolean(value, function_set_hidden_hosts_visibility);
+    if (strcasecmp(option, "stat_workaround_depth") == 0)
+	return reconfigure_set_number(value, function_set_stat_workaround_depth);
+
+    /* unknown option */
+    return 0;
+}
+
+
+
+/*===========================================================*/
+/* WARNING: the value[i] can be changed inside this function */
+/*===========================================================*/
+int reconfigure_parse_auth_option(char *value[], int count){
+    char	*comp = "", *share = "";
+    char	*domain = "", *user, *password;
+    int		user_pos = 0;
+
+    if ((count < 2) || (count > 3)) return 0;
+
+    /* server and share */
+    if (count == 3){
+	if (*value[0] == '/') return 0;
+
+	user_pos = 1;
+	comp = value[0];
+	if ((share = strchr(comp, '/')) != NULL){
+	    *share++ = '\0';
+	    if ((*share == '\0') || (strchr(share, '/') != NULL)) return 0;
+	}else{
+	    share = "";
+	}
+    };
+
+    /* domain and user */
+    if (*value[user_pos] == '/') return 0;
+    if ((user = strchr(value[user_pos], '/')) != NULL){
+	domain = value[user_pos];
+	*user++ = '\0';
+	if ((*user == '\0') || (strchr(user, '/') != NULL)) return 0;
+    }else{
+	user = value[user_pos];
+    }
+
+    /* password */
+    password = value[user_pos + 1];
+
+    return (auth_store_auth_data(comp, share, domain, user, password) == 0);
+}
+
+int reconfigure_parse_host_option(char *value[], int count){
+    const char	*group_ptn	= "parent_group=";
+    const char	*visible_ptn	= "visible=";
+    const char	*parent_group	= NULL;
+    int		visibility	= -1;
+    int		i;
+    size_t	len;
+
+    if ((count < 1) || (count > 3)) return 0;
+
+    if (strchr(value[0], '/') != NULL) return 0;
+
+    for(i = 1; i < count; i++){
+	len = strlen(group_ptn);
+	if (strncasecmp(value[i], group_ptn, len) == 0){
+	    if (parent_group != NULL) return 0;
+	    parent_group = value[i] + len;
+	    if ((*parent_group == '\0') ||
+		(strchr(parent_group, '/') != NULL)) return 0;
+	}
+	len = strlen(visible_ptn);
+	if (strncasecmp(value[i], visible_ptn, len) == 0){
+	    if (visibility != -1) return 0;
+	    if (! reconfigure_get_boolean(value[i] + len, &visibility))
+		return 0;
+	}
+    }
+    if (visibility == -1) visibility = 1;
+
+    return (smbitem_mkhost(value[0], parent_group,
+			visibility, SMBITEM_USER_TREE) == 0);
+}
+
+int reconfigure_parse_link_option(char *value[], int count){
+    char	*name;
+    int		result;
+
+    if ((count < 1) || (count > 2)) return 0;
+    if (*value[0] == '/') return 0;
+
+    name = strchr(value[0], '/');
+    if (name == NULL){
+	if (*value[1] == '\0') return 0;
+    }else{
+	name++;
+	if ((*name == '\0') || (strchr(name, '/') != NULL)) return 0;
+    }
+
+    if (*value[1] == '\0'){
+	char	*link = malloc(strlen(name) + 4);
+
+	if (link == NULL) return 0;
+	strcpy(link, "../");
+	strcat(link, name);
+	result = (smbitem_mklink(value[0], link, SMBITEM_USER_TREE) == 0);
+	free(link);
+    }else{
+	result = (smbitem_mklink(value[0], value[1], SMBITEM_USER_TREE) == 0);
+    }
+    return result;
+}
+
+int reconfigure_parse_group_option(char *value[], int count){
+    if (count != 1) return 0;
+    if (strchr(value[0], '/') != NULL) return 0;
+    return (smbitem_mkgroup(value[0], SMBITEM_USER_TREE) == 0);
+}
+
 int reconfigure_read_config_file(const char *filename, int startup){
     FILE	*file;
     int		cnt, ok_permission;
@@ -271,187 +468,27 @@ int reconfigure_read_config_file(const char *filename, int startup){
 		reconfigure_read_config_file(arg[1], startup);
 		continue;
 	    }
-
-	    /* common.h */
-	    if (strcasecmp(arg[0], "smbnetfs_debug") == 0)
-		if (reconfigure_set_number(arg[1],
-				common_set_smbnetfs_debug_level)) continue;
-	    if (strcasecmp(arg[0], "log_file") == 0)
-		if (common_set_log_file(arg[1])) continue;
-
-	    /* process.h */
-	    if (strcasecmp(arg[0], "listen_timeout") == 0)
-		if (reconfigure_set_number(arg[1],
-				process_set_server_listen_timeout)) continue;
-	    if (strcasecmp(arg[0], "smb_debug_level") == 0)
-		if (reconfigure_set_number(arg[1],
-				process_set_server_smb_debug_level)) continue;
-	    if (strcasecmp(arg[0], "local_charset") == 0)
-		if (process_set_server_local_charset(arg[1])) continue;
-	    if (strcasecmp(arg[0], "samba_charset") == 0)
-		if (process_set_server_samba_charset(arg[1])) continue;
-
-	    /* smb_conn.h */
-	    if (strcasecmp(arg[0], "max_retry_count") == 0)
-		if (reconfigure_set_number(arg[1],
-				smb_conn_set_max_retry_count)) continue;
-	    if (strcasecmp(arg[0], "max_passwd_query_count") == 0)
-		if (reconfigure_set_number(arg[1],
-				smb_conn_set_max_passwd_query_count)) continue;
-	    if (strcasecmp(arg[0], "reply_timeout") == 0)
-		if (reconfigure_set_number(arg[1],
-				smb_conn_set_server_reply_timeout)) continue;
-
-	    /* samba.h */
-	    if (strcasecmp(arg[0], "max_rw_block_size") == 0){
-		if (startup){
-		    if (reconfigure_set_kb_size(arg[1], samba_init)) continue;
-		}else continue;
-	    }
-	    if (strcasecmp(arg[0], "max_ctx_count") == 0)
-		if (reconfigure_set_number(arg[1],
-				samba_set_max_ctx_count)) continue;
-
-	    /* event.h */
-	    if (strcasecmp(arg[0], "time_step") == 0)
-		if (reconfigure_set_number(arg[1],
-				event_set_time_step)) continue;
-	    if (strcasecmp(arg[0], "smb_tree_scan_period") == 0)
-		if (reconfigure_set_number(arg[1],
-				event_set_smb_tree_scan_period)) continue;
-	    if (strcasecmp(arg[0], "smb_tree_elements_ttl") == 0)
-		if (reconfigure_set_number(arg[1],
-				event_set_smb_tree_elements_ttl)) continue;
-	    if (strcasecmp(arg[0], "config_update_period") == 0)
-		if (reconfigure_set_number(arg[1],
-				event_set_config_update_period)) continue;
-	    if (strcasecmp(arg[0], "smb_query_browsers") == 0)
-		if (reconfigure_set_boolean(arg[1],
-				event_set_query_browser_flag)) continue;
-
-	    /* function.h */
-	    if (strcasecmp(arg[0], "free_space_size") == 0)
-		if (reconfigure_set_size(arg[1],
-				function_set_free_space_size)) continue;
-	    if (strcasecmp(arg[0], "quiet_flag") == 0)
-		if (reconfigure_set_boolean(arg[1],
-				function_set_quiet_flag)) continue;
-	    if (strcasecmp(arg[0], "show_$_shares") == 0)
-		if (reconfigure_set_boolean(arg[1],
-				function_set_dollar_share_visibility)) continue;
-	    if (strcasecmp(arg[0], "show_hidden_hosts") == 0)
-		if (reconfigure_set_boolean(arg[1],
-				function_set_hidden_hosts_visibility)) continue;
-	    if (strcasecmp(arg[0], "stat_workaround_depth") == 0)
-		if (reconfigure_set_number(arg[1],
-				function_set_stat_workaround_depth)) continue;
+	    if (reconfigure_analyse_simple_option(arg[0], arg[1], startup)) continue;
 	}
-	if ((cnt >= 3) && (cnt <= 4) && (strcasecmp(arg[0], "auth") == 0)){
-	    char	*comp, *share;
-	    char	*domain, *user, *password;
-	    int		shift;
-
+	
+	if (strcasecmp(arg[0], "auth") == 0){
 	    if (!ok_permission) goto insecure_permission;
-
-	    /* server and share */
-	    if (cnt == 4){
-		if (*arg[1] == '/') goto error;
-
-		shift = 1;
-		comp = arg[1];
-		if ((share = strchr(comp, '/')) == NULL){
-		    share = "";
-		}else{
-		    *share++ = '\0';
-		    if ((*share == '\0') || (strchr(share, '/') != NULL))
-			goto error;
-		}
-	    }else{
-		comp = "";
-		share = "";
-		shift = 0;
-	    };
-
-	    /* domain and user */
-	    if (*arg[1 + shift] == '/') goto error;
-	    domain = "";
-	    if ((user = strchr(arg[1 + shift], '/')) == NULL){
-		user = arg[1 + shift];
-	    }else{
-		domain = arg[1 + shift];
-		*user++ = '\0';
-		if ((*user == '\0') || (strchr(user, '/') != NULL))
-		    goto error;
-	    }
-
-	    /* password */
-	    password = arg[2 + shift];
-
-	    if (auth_store_auth_data(comp, share, domain, user, password) == 0)
-		continue;
+	    /* WARNING: this function can change the contents of arg[i] */
+	    if (reconfigure_parse_auth_option(arg + 1, cnt - 1)) continue;
 	}
-	if ((cnt >= 2) && (cnt <= 4) && (strcasecmp(arg[0], "host") == 0)){
-	    const char	*group_ptn	= "parent_group=";
-	    const char	*visible_ptn	= "visible=";
-	    char	*parent_group;
-	    int		i, visibility;
-	    size_t	len;
-
+	if (strcasecmp(arg[0], "host") == 0){
 	    if (!ok_permission) goto insecure_permission;
-	    if (strchr(arg[1], '/') != NULL) goto error;
-
-	    parent_group = NULL;
-	    visibility = -1;
-	    for(i = 2; i < cnt; i++){
-		len = strlen(group_ptn);
-		if (strncasecmp(arg[i], group_ptn, len) == 0){
-		    if (parent_group != NULL) goto error;
-		    parent_group = arg[i] + len;
-		    if ((*parent_group == '\0') ||
-			(strchr(parent_group, '/') != NULL)) goto error;
-		}
-		len = strlen(visible_ptn);
-		if (strncasecmp(arg[i], visible_ptn, len) == 0){
-		    if (visibility != -1) goto error;
-		    if (! reconfigure_get_boolean(arg[i] + len, &visibility))
-			goto error;
-		}
-	    }
-	    if (visibility == -1) visibility = 1;
-
-	    if (smbitem_mkhost(arg[1], parent_group,
-		visibility, SMBITEM_USER_TREE) == 0) continue;
+	    if (reconfigure_parse_host_option(arg + 1, cnt - 1)) continue;
 	}
-	if ((cnt == 2) && (strcasecmp(arg[0], "group") == 0)){
+	if (strcasecmp(arg[0], "link") == 0){
 	    if (!ok_permission) goto insecure_permission;
-	    if (strchr(arg[1], '/') != NULL) goto error;
-
-	    if (smbitem_mkgroup(arg[1], SMBITEM_USER_TREE) == 0) continue;
+	    if (reconfigure_parse_link_option(arg + 1, cnt - 1)) continue;
 	}
-	if ((cnt >= 2) && (cnt <= 3) && (strcasecmp(arg[0], "link") == 0)){
-	    char	*name;
-
+	if (strcasecmp(arg[0], "group") == 0){
 	    if (!ok_permission) goto insecure_permission;
-	    if (*arg[1] == '/') goto error;
-
-	    name = strchr(arg[1], '/');
-	    if (name == NULL){
-		if (*arg[2] == '\0') goto error;
-	    }else{
-		name++;
-		if ((*name == '\0') || (strchr(name, '/') != NULL)) goto error;
-	    }
-
-	    if (*arg[2] == '\0'){
-		if (strlen(name) + 4 > arg_len[2]) goto error;
-		strcpy(arg[2], "../");
-		strcat(arg[2], name);
-	    }
-	    if (smbitem_mklink(arg[1], arg[2], SMBITEM_USER_TREE) == 0)
-		continue;
+	    if (reconfigure_parse_group_option(arg + 1, cnt - 1)) continue;
 	}
 
-      error:
 	DPRINTF(0, "Error: (file: %s) Invalid input line : %s\n", filename, s);
 	continue;
 	
@@ -464,4 +501,16 @@ int reconfigure_read_config_file(const char *filename, int startup){
     fclose(file);
     free((char *) filename);
     return 0;
+}
+
+int reconfigure_analyse_cmdline_option(const char *option, char *value){
+    if (strcmp(option, "config") == 0){
+	if (special_config == 1)
+	    fprintf(stderr, "WARNING: duplicate 'config=file' option found.\n");
+
+	fprintf(stderr, "WARNING: 'config=file' option is not implemented yet.\n");
+	special_config = 1;
+	return 1;
+    }
+    return reconfigure_analyse_simple_option(option, value, 1);
 }

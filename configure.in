@@ -78,7 +78,7 @@ PKG_CHECK_MODULES(FUSE, [fuse >= 2.6])
 FUSE_CFLAGS="$CFLAGS -Wall -W -D_REENTRANT $FUSE_CFLAGS"
 LIBS="$LIBS $FUSE_LIBS"
 LDFLAGS="$LDFLAGS -rdynamic"
-CFLAGS="$FUSE_CFLAGS -DFUSE_USE_VERSION=26"
+CFLAGS="$FUSE_CFLAGS -D_GNU_SOURCE -DFUSE_USE_VERSION=26"
 
 dnl ******************************
 dnl *** Tests for libsmbclient ***

@@ -1,10 +1,14 @@
 #ifndef __RECONFIGURE_H__
 #define	__RECONFIGURE_H__
 
-extern const char	*config_file;
+#include <stdio.h>
 
-void reconfigure_set_config_dir(const char *path);
-void set_default_login_and_configdir(void);
+extern int		special_config;
+extern const char	config_file[256];
+extern const char	*smbnetfs_option_list;
+
+void reconfigure_set_default_login_and_configdir(void);
+int  reconfigure_analyse_cmdline_option(const char *option, char *value);
 int  reconfigure_read_config_file(const char *filename, int startup);
 
 #endif /* __RECONFIGURE_H__ */

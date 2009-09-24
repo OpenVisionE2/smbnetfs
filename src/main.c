@@ -22,6 +22,7 @@
 #include "event.h"
 #include "reconfigure.h"
 
+
 void check_samba_version(void){
     const char	*samba_version;
 
@@ -73,25 +74,82 @@ void set_signal_reactions(void){
     }
 }
 
+void print_help(struct fuse_args *outargs){
+    fprintf(stderr,
+	"usage: %s mountpoint [options]\n"
+	"\n"
+	"general options:\n"
+	"    -o opt,[opt...]        mount options\n"
+	"    -h   --help            print help\n"
+	"    -V   --version         print version\n"
+	"\n"
+	"SMBNetFS options:\n"
+	"%s"
+	"\n", outargs->argv[0], smbnetfs_option_list);
+    fuse_opt_add_arg(outargs, "-ho");
+    fuse_main(outargs->argc, outargs->argv, &smb_oper, NULL);
+}
+
+static int smbnetfs_opt_proc(void *data, const char *arg, int key, struct fuse_args *outargs){
+    const char	*value;
+    char	*name;
+    int		result;
+
+    (void) data;
+    (void) key;
+
+    if ((strcmp(arg, "--version") == 0) || (strcmp(arg, "-V") == 0)){
+	fprintf(stderr, "SMBNetFS version " PACKAGE_VERSION "\n");
+	fuse_opt_add_arg(outargs, "--version");
+	fuse_main(outargs->argc, outargs->argv, &smb_oper, NULL);
+	exit(EXIT_SUCCESS);
+    }
+    if ((strcmp(arg, "--help") == 0) || (strcmp(arg, "-h") == 0)){
+	print_help(outargs);
+	exit(EXIT_FAILURE);
+    }
+
+    if ((value = strchr(arg, '=')) == NULL) return 1;
+    if (value++ == arg) return 1;
+    if (strlen(value) == 0) return 1;
+    if ((name = strndup(arg, value - arg - 1)) == NULL) return 1;
+
+    /* check for specific SMBNetFS options */
+    result = reconfigure_analyse_cmdline_option(name, (char*) value);
+
+    free(name);
+    return result ? 0 : 1;
+}
+
 int main(int argc, char *argv[]){
+    struct fuse_args	args = FUSE_ARGS_INIT(argc, argv);
+
     setlocale(LC_ALL, "");
     check_samba_version();
-    set_default_login_and_configdir();
     set_signal_reactions();
 
     /* init all subsystems with their default values */
+    reconfigure_set_default_login_and_configdir();
     smbitem_init();
     process_init();
     samba_init(1024 * get_default_rw_block_size());
     event_set_event_handler(&smb_oper);
 
-//    reconfigure_set_config_dir("/home/kl/smbnetfs/conf/");
+    /* parse command line options */
+    if (fuse_opt_parse(&args, NULL, NULL, smbnetfs_opt_proc) == -1){
+	fprintf(stderr, "Can't parse command line, please verify it.\n");
+	exit(EXIT_FAILURE);
+    }
+    printf("args.argc=%d\nBye!\n", args.argc);
+    exit(0);
 
-    /* read configuration */
-    reconfigure_read_config_file(config_file, 1);
+    if (!special_config){
+	/* read default config file */
+	reconfigure_read_config_file(config_file, 1);
+    }
     samba_allocate_ctxs();
 
-    fuse_main(argc, argv, &smb_oper, NULL);
+    fuse_main(args.argc, args.argv, &smb_oper, NULL);
     samba_destroy_unused_ctxs();
     smbitem_delete_obsolete(time(NULL) + 10, SMBITEM_SAMBA_TREE);
     smbitem_delete_obsolete(time(NULL) + 10, SMBITEM_USER_TREE);
