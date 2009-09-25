@@ -30,7 +30,7 @@ enum config_read_mode{
 
 int		special_config		= 0;
 const char	*config_dir_postfix	= "/.smb";
-const char	config_file[256]	= "smbnetfs.conf";
+char		config_file[256]	= "smbnetfs.conf";
 char		config_dir[2048]	= "/";
 
 const char *smbnetfs_option_list =
@@ -72,15 +72,15 @@ void reconfigure_set_config_dir(const char *path){
 	return;
     }
     fprintf(stderr,
-	"WARNING!!! Configuration directory ~%s is not found. Please create it.\n"
+	"WARNING!!! Configuration directory %s is not found. Please create it.\n"
 	"This directory should contain at least two files: smb.conf and smbnetfs.conf.\n"
 	"You may copy smb.conf from the /etc/samba directory. You can find a sample of\n"
 	"smbnetfs.conf in the doc directory of original SMBNetFS distribution.\n\n"
-	"Using default settings for now.\n", config_dir_postfix);
+	"Using default settings for now.\n", path);
 }
 
 void reconfigure_set_default_login_and_configdir(void){
-    char			buf[1024];
+    char			buf[2048];
     register struct passwd	*pwd;
     const char			*home, *user, *dir;
 
@@ -299,7 +299,53 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int start
     return 0;
 }
 
+int reconfigure_analyse_cmdline_option(const char *option, char *value){
+    if (strcmp(option, "config") == 0){
+	char	*pos, *name, path[2048];
+	size_t	len;
 
+	if (special_config == 1)
+	    fprintf(stderr, "WARNING: duplicate 'config=file' option found.\n");
+
+	len = 0;
+	memset(path, 0, sizeof(path));
+	if (*value != '/'){
+	    if (getcwd(path, sizeof(path) - 1) == NULL) goto error;
+
+	    len = strlen(path);
+	    if (path[len - 1] != '/'){
+		if (len + 2 > sizeof(path)) goto error;
+		strcat(path, "/");
+		len++;
+	    }
+	}
+
+	name = value;
+	if ((pos = strrchr(name, '/')) != NULL){
+	    pos++;
+	    if (len + (pos - name) + 1 > sizeof(path)) goto error;
+	    strncat(path, name, pos - name);
+	    name = pos;
+	}
+	if (*name == '\0') goto error;
+
+	/* set config dir */
+	if (strlen(path) + 1  > sizeof(config_dir))  goto error;
+	reconfigure_set_config_dir(path);
+
+	/* set config file name */
+	if (strlen(name) + 1 > sizeof(config_file)) goto error;
+	strcpy(config_file, name);
+
+	special_config = 1;
+	return 1;
+
+      error:
+	fprintf(stderr, "Can't set alternative configuration file '%s'.\nUse default one instead.\n", value);
+	return 1;
+    }
+    return reconfigure_analyse_simple_option(option, value, 1);
+}
 
 /*===========================================================*/
 /* WARNING: the value[i] can be changed inside this function */
@@ -503,14 +549,6 @@ int reconfigure_read_config_file(const char *filename, int startup){
     return 0;
 }
 
-int reconfigure_analyse_cmdline_option(const char *option, char *value){
-    if (strcmp(option, "config") == 0){
-	if (special_config == 1)
-	    fprintf(stderr, "WARNING: duplicate 'config=file' option found.\n");
-
-	fprintf(stderr, "WARNING: 'config=file' option is not implemented yet.\n");
-	special_config = 1;
-	return 1;
-    }
-    return reconfigure_analyse_simple_option(option, value, 1);
+int reconfigure_read_config(int startup){
+    return reconfigure_read_config_file(config_file, startup);
 }

@@ -249,7 +249,7 @@ void event_reread_config(void){
     reread_time = time(NULL);
     DPRINTF(5, "start at timestamp=%u\n", (unsigned) reread_time);
 
-    reconfigure_read_config_file(config_file, 0);
+    reconfigure_read_config(0);
     smbitem_delete_obsolete(reread_time, SMBITEM_USER_TREE);
     auth_delete_obsolete(reread_time);
     event_set_last_config_update(reread_time);

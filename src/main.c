@@ -141,10 +141,7 @@ int main(int argc, char *argv[]){
 	exit(EXIT_FAILURE);
     }
 
-    if (!special_config){
-	/* read default config file */
-	reconfigure_read_config_file(config_file, 1);
-    }
+    if (!special_config) reconfigure_read_config(1);
     samba_allocate_ctxs();
 
     fuse_main(args.argc, args.argv, &smb_oper, NULL);
