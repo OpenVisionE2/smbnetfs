@@ -110,6 +110,7 @@ int process_set_server_samba_charset(const char *charset){
 
 int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     int			error;
+    int			debug_level;
     int			pair[2];
     pid_t		pid;
     struct process_rec	*rec;
@@ -139,6 +140,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     }
 
     memset(rec, 0, sizeof(struct process_rec));
+    debug_level = common_get_smbnetfs_debug_level();
 
     if ((pid = fork()) == -1){
 	error = errno;
@@ -159,6 +161,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	srv_ctx.shmem_ptr       = shmem_ptr;
 	srv_ctx.shmem_size      = shmem_size;
 	srv_ctx.timeout         = process_server_listen_timeout;
+	srv_ctx.debug_level     = debug_level;
 	srv_ctx.smb_debug_level = process_server_smb_debug_level;
 	srv_ctx.samba_charset   = process_server_samba_charset;
 	srv_ctx.local_charset   = process_server_local_charset;

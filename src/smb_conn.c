@@ -185,6 +185,7 @@ int smb_conn_send_password(struct smb_conn_ctx *ctx,
     header.query_len   = iov[0].iov_len + iov[1].iov_len +
 			 iov[2].iov_len + iov[3].iov_len + iov[4].iov_len;
     header.query_cmd   = PASSWORD;
+    header.debug_level = common_get_smbnetfs_debug_level();
     data.domain_offs   = sizeof(data);
     data.username_offs = sizeof(data) + iov[2].iov_len;
     data.password_offs = sizeof(data) + iov[2].iov_len + iov[3].iov_len;
@@ -219,6 +220,7 @@ int smb_conn_process_query_lowlevel_va(
 
     iov_cnt = 2;
     query_header.query_cmd = query_cmd;
+    query_header.debug_level = common_get_smbnetfs_debug_level();
     query_header.query_len = sizeof(query_header) + query_len;
 
     iov[0].iov_base = &query_header;
@@ -275,6 +277,29 @@ int smb_conn_process_query_lowlevel_va(
 	/* check reply */
 	reply_hdr = (struct smb_conn_reply_hdr *) buf;
 	if ((ssize_t) reply_hdr->reply_len != bytes) goto error;
+
+	/* is it message? */
+	if (reply_hdr->reply_cmd == MESSAGE){
+	    const char			*msg;
+	    struct smb_conn_message_req	*msg_req;
+
+	    if (reply_hdr->errno_value != 0) goto error;
+	    if (buf[bytes - 1] != '\0' ) goto error;
+	    bytes -= sizeof(struct smb_conn_reply_hdr);
+	    if (bytes < (ssize_t) sizeof(struct smb_conn_message_req))
+		goto error;
+
+	    msg_req = (struct smb_conn_message_req *) (reply_hdr + 1);
+	    if (msg_req->msg_offs != sizeof(struct smb_conn_message_req))
+		goto error;
+	    bytes -= sizeof(struct smb_conn_message_req);
+
+	    msg = ((char *) msg_req) + msg_req->msg_offs;
+	    if (bytes != (ssize_t) (strlen(msg) + 1)) goto error;
+
+	    common_debug_print(msg_req->debug_level, msg);
+	    continue;
+	}
 
 	/* is it password request? */
 	if (reply_hdr->reply_cmd == PASSWORD){

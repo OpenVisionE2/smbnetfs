@@ -11,6 +11,7 @@
 typedef void *		smb_conn_srv_fd;
 
 enum smb_conn_cmd{
+    MESSAGE = -2,
     PASSWORD = -1,
     OPEN = 0,
     CREAT,
@@ -38,6 +39,7 @@ enum smb_conn_cmd{
 struct smb_conn_query_hdr{
     size_t			query_len;
     enum smb_conn_cmd		query_cmd;
+    int				debug_level;
 };
 
 struct smb_conn_reply_hdr{
@@ -162,6 +164,14 @@ struct smb_conn_passwd_req{
     size_t			share_offs;
 };
 
+/* MESSAGE */
+struct smb_conn_message_req{
+    pid_t			pid;
+    int				debug_level;
+    size_t			msg_offs;
+};
+
+
 /* ------------------------------- */
 
 struct smb_conn_srv_ctx{
@@ -169,6 +179,7 @@ struct smb_conn_srv_ctx{
     char			*shmem_ptr;
     size_t			shmem_size;
     int				timeout;
+    int				debug_level;
     int				smb_debug_level;
     const char			*local_charset;
     const char			*samba_charset;
