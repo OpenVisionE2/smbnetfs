@@ -1,5 +1,4 @@
 Current restriction:
-  * a lot of debug output to console.
   * truncate() and ftruncate() are not supported yet for libsmbclient < 3.2
 
 Opened questions:

@@ -8,6 +8,8 @@
 #include "common.h"
 
 int		common_debug_level	= 0;
+FILE*		common_stdlog		= NULL;
+char		common_logfile[256]	= "";
 pthread_mutex_t	m_common		= PTHREAD_MUTEX_INITIALIZER;
 
 int common_set_smbnetfs_debug_level(int level){
@@ -30,9 +32,32 @@ int common_get_smbnetfs_debug_level(void){
 }
 
 int common_set_log_file(const char *logfile){
-    (void) logfile;
+    int result;
 
-    return 1;
+    DPRINTF(7, "logfile=%s\n", logfile);
+
+    result = 1;
+    pthread_mutex_lock(&m_common);
+    if ( ! ((logfile != NULL) && (strcmp(common_logfile, logfile) == 0))){
+	if (common_stdlog != NULL){
+	    fclose(common_stdlog);
+	    memset(common_logfile, 0, sizeof(common_logfile));
+	    common_stdlog = NULL;
+	}
+
+	if (logfile != NULL)
+	    strncpy(common_logfile, logfile, sizeof(common_logfile) - 1);
+
+	if (*common_logfile != '\0'){
+	    common_stdlog = fopen(common_logfile, "a");
+	    if (common_stdlog == NULL){
+		memset(common_logfile, 0, sizeof(common_logfile));
+		result = 0;
+	    }
+	}
+    }
+    pthread_mutex_unlock(&m_common);
+    return result;
 }
 
 void common_debug_print(int level, const char *fmt, ...){
@@ -43,6 +68,10 @@ void common_debug_print(int level, const char *fmt, ...){
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
 	fflush(stderr);
+	if (common_stdlog != NULL){
+	    vfprintf(common_stdlog, fmt, ap);
+	    fflush(common_stdlog);
+	}
 	va_end(ap);
     }
     pthread_mutex_unlock(&m_common);
@@ -54,14 +83,21 @@ void common_print_backtrace(void){
     size_t		size;
     int			fd;
 
-    fd = fileno(stderr);
-
     snprintf(buf, sizeof(buf), "%d->%s: dumping ...\n", getpid(), __FUNCTION__);
     buf[sizeof(buf) - 2] = '\n';
     buf[sizeof(buf) - 1] = '\0';
-    write(fd, buf, strlen(buf));
 
     size = backtrace(array, 200);
+
+    fd = fileno(stderr);
+    write(fd, buf, strlen(buf));
     backtrace_symbols_fd(array, size, fd);
     fsync(fd);
+
+    if (common_stdlog != NULL){
+	fd = fileno(common_stdlog);
+	write(fd, buf, strlen(buf));
+	backtrace_symbols_fd(array, size, fd);
+	fsync(fd);
+    }
 }
