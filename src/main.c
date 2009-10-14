@@ -100,6 +100,7 @@ static int smbnetfs_opt_proc(void *data, const char *arg, int key, struct fuse_a
 
     if ((strcmp(arg, "--version") == 0) || (strcmp(arg, "-V") == 0)){
 	fprintf(stderr, "SMBNetFS version " PACKAGE_VERSION "\n");
+	fprintf(stderr, "libsmbclient version %s\n", smbc_version());
 	fuse_opt_add_arg(outargs, "--version");
 	fuse_main(outargs->argc, outargs->argv, &smb_oper, NULL);
 	exit(EXIT_SUCCESS);
