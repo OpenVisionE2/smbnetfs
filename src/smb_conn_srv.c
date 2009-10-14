@@ -36,7 +36,7 @@
     #define	smbc_setFunctionAuthDataWithContext(ctx, ctx_auth_fn)	\
 	((ctx)->callbacks.auth_fn = (ctx_auth_fn##_old))
     #define	smbc_ftruncate(a, b)					\
-	(EINVAL)
+	( errno = EINVAL, -1)
 #endif
 
 void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx, int level,
