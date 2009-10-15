@@ -223,3 +223,6 @@ New in 0.5.0 (babushka)
   - rewrite of samba tree storage and authorization code (becomes faster)
   - default password for the all hosts from some workgroup is supported now
   - safe truncate() support (samba >= 3.2.0 is required)
+  - it's now possible to pass options in command line
+  - it's now possible to use alternate config file location
+  - bug fixes

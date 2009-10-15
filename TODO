@@ -1,5 +1,5 @@
 Current restriction:
-  * truncate() and ftruncate() are not supported yet for libsmbclient < 3.2
+  * truncate() and ftruncate() are not supported for libsmbclient < 3.2
 
 Opened questions:
   * is it required to recode username/domain/password from local to samba encoding ?
