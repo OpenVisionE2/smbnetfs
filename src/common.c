@@ -79,25 +79,33 @@ void common_debug_print(int level, const char *fmt, ...){
 
 void common_print_backtrace(void){
     static char		buf[256];
+    int			fd;
+  #ifdef HAVE_BACKTRACE
     void		*array[200];
     size_t		size;
-    int			fd;
+  #endif /* HAVE_BACKTRACE */
 
     snprintf(buf, sizeof(buf), "%d->%s: dumping ...\n", getpid(), __FUNCTION__);
     buf[sizeof(buf) - 2] = '\n';
     buf[sizeof(buf) - 1] = '\0';
 
+  #ifdef HAVE_BACKTRACE
     size = backtrace(array, 200);
+  #endif /* HAVE_BACKTRACE */
 
     fd = fileno(stderr);
     write(fd, buf, strlen(buf));
+  #ifdef HAVE_BACKTRACE
     backtrace_symbols_fd(array, size, fd);
+  #endif /* HAVE_BACKTRACE */
     fsync(fd);
 
     if (common_stdlog != NULL){
 	fd = fileno(common_stdlog);
 	write(fd, buf, strlen(buf));
+      #ifdef HAVE_BACKTRACE
 	backtrace_symbols_fd(array, size, fd);
+      #endif /* HAVE_BACKTRACE */
 	fsync(fd);
     }
 }
