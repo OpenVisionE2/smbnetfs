@@ -220,7 +220,6 @@ void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     SMBCCTX	*ctx;
 
     if ((ctx = smbc_new_context()) == NULL) goto error;
-    if (smbc_init_context(ctx) == NULL) goto error;
     smbc_setDebug(ctx, srv_ctx->smb_debug_level);
     smbc_setFunctionAuthDataWithContext(ctx, smb_conn_srv_auth_fn);
     smbc_setOptionUserData(ctx, srv_ctx);
@@ -228,6 +227,7 @@ void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     smbc_setOptionUseKerberos(ctx, 1);
     smbc_setOptionFallbackAfterKerberos(ctx, 1);
 #endif
+    if (smbc_init_context(ctx) == NULL) goto error;
     smbc_set_context(ctx);
     return;
 
