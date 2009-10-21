@@ -21,6 +21,11 @@
 #include "process.h"
 #include "smb_conn.h"
 
+#ifndef MAP_ANONYMOUS
+    #define	MAP_ANONYMOUS	MAP_ANON
+#endif
+
+
 int		smb_conn_max_retry_count	= 3;
 int		smb_conn_max_passwd_query_count	= 10;
 int		smb_conn_server_reply_timeout	= 60;
