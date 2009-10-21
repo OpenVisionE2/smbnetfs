@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <locale.h>
+#include <signal.h>
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/socket.h>
