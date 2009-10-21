@@ -120,6 +120,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	return -1;
     }
 
+    error = 0;
     pid = (pid_t) (-1);
     pthread_mutex_lock(&m_process);
     if (process_start_enabled != 1){
@@ -130,12 +131,16 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     if ((rec = malloc(sizeof(struct process_rec))) == NULL){
 	error = errno;
 	pair[0] = -1;
+	DPRINTF(6, "starting new child failed on malloc(): errno=%d, %s\n",
+	    errno, strerror(errno));
 	goto error;
     }
     if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair) < 0){
 	error = errno;
 	free(rec);
 	pair[0] = -1;
+	DPRINTF(6, "starting new child failed on socketpair(): errno=%d, %s\n",
+	    errno, strerror(errno));
 	goto error;
     }
 
@@ -148,6 +153,8 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	close(pair[1]);
 	free(rec);
 	pair[0] = -1;
+	DPRINTF(6, "starting new child failed on fork(): errno=%d, %s\n",
+	    errno, strerror(errno));
 	goto error;
     }
 
@@ -177,6 +184,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 
   error:
     pthread_mutex_unlock(&m_process);
+    errno = error;
     return pair[0];
 }
 
