@@ -7,6 +7,9 @@ AC_CHECK_FUNCS([setxattr])
 AC_CHECK_FUNC(backtrace_symbols_fd,
     [AC_DEFINE([HAVE_BACKTRACE], [], [Linux])]
 )
+AC_CHECK_FUNC(strndup,
+    [AC_DEFINE([HAVE_STRNDUP], [], [Linux])]
+)
 AC_CHECK_FUNC(setlocale, [found_setlocale=yes])
 if test "x$found_setlocale" != "xyes" ; then
     AC_MSG_ERROR([*** No setlocale() implementation found in C library])

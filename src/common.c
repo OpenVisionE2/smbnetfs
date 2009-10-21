@@ -1,5 +1,6 @@
 #include "config.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <stdarg.h>
 #include <string.h>
 #include <pthread.h>
@@ -109,3 +110,15 @@ void common_print_backtrace(void){
 	fsync(fd);
     }
 }
+
+#ifndef HAVE_STRNDUP
+char* strndup(const char *s, size_t n){
+    char	*p;
+
+    if (strlen(s) <= n) return strdup(s);
+    if ((p = malloc(n + 1)) == NULL) return NULL;
+    memcpy(p, s, n);
+    p[n] = '\0';
+    return p;
+}
+#endif /* HAVE_STRNDUP */
