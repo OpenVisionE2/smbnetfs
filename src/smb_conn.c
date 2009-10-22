@@ -284,11 +284,15 @@ int smb_conn_process_query_lowlevel_va(
 	if ((ssize_t) reply_hdr->reply_len != bytes) goto error;
 
 	/* is it message? */
-	if (reply_hdr->reply_cmd == MESSAGE){
+	if ((reply_hdr->reply_cmd == MESSAGE) ||
+	    (reply_hdr->reply_cmd == DIE_MSG)){
+
 	    const char			*msg;
 	    struct smb_conn_message_req	*msg_req;
 
-	    if (reply_hdr->errno_value != 0) goto error;
+	    if ((reply_hdr->reply_cmd == MESSAGE) &&
+		(reply_hdr->errno_value != 0)) goto error;
+
 	    if (buf[bytes - 1] != '\0' ) goto error;
 	    bytes -= sizeof(struct smb_conn_reply_hdr);
 	    if (bytes < (ssize_t) sizeof(struct smb_conn_message_req))
@@ -303,6 +307,11 @@ int smb_conn_process_query_lowlevel_va(
 	    if (bytes != (ssize_t) (strlen(msg) + 1)) goto error;
 
 	    common_debug_print(msg_req->debug_level, msg);
+
+	    if (reply_hdr->reply_cmd == DIE_MSG){
+		errno = reply_hdr->errno_value;
+		goto error;
+	    }
 	    continue;
 	}
 

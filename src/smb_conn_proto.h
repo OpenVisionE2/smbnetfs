@@ -11,6 +11,7 @@
 typedef void *		smb_conn_srv_fd;
 
 enum smb_conn_cmd{
+    DIE_MSG = -3,
     MESSAGE = -2,
     PASSWORD = -1,
     OPEN = 0,
@@ -164,7 +165,7 @@ struct smb_conn_passwd_req{
     size_t			share_offs;
 };
 
-/* MESSAGE */
+/* MESSAGE and DIE_MSG */
 struct smb_conn_message_req{
     pid_t			pid;
     int				debug_level;

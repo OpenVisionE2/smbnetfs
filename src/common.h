@@ -11,14 +11,15 @@ int  common_set_log_file(const char *logfile);
 void common_debug_print(int level, const char *fmt, ...);
 void common_print_backtrace(void);
 
-//#include <stdio.h>
-//#define	DPRINTF(level, fmt, args...)	{ printf("%d->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stdout); }
-
-#define	DPRINTF(level, fmt, args...)	common_debug_print(level, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
-
+#ifdef PRINTF_DEBUG
+  #include <stdio.h>
+  #define	DPRINTF(level, fmt, args...)	{ fprintf(stderr, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
+#else
+  #define	DPRINTF(level, fmt, args...)	common_debug_print(level, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
+#endif
 
 #ifndef HAVE_STRNDUP
-char* strndup(const char *s, size_t n);
+  char* strndup(const char *s, size_t n);
 #endif
 
 #endif /* __COMMON_H__ */

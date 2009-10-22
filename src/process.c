@@ -136,12 +136,15 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	goto error;
     }
     if (socketpair(AF_UNIX, SOCK_SEQPACKET, 0, pair) < 0){
-	error = errno;
-	free(rec);
-	pair[0] = -1;
-	DPRINTF(6, "starting new child failed on socketpair(): errno=%d, %s\n",
-	    errno, strerror(errno));
-	goto error;
+	DPRINTF(6, "using SOCK_DGRAM instead of SOCK_SEQPACKET\n");
+	if (socketpair(AF_UNIX, SOCK_DGRAM, 0, pair) < 0){
+	    error = errno;
+	    free(rec);
+	    pair[0] = -1;
+	    DPRINTF(6, "starting new child failed on socketpair(): errno=%d, %s\n",
+		errno, strerror(errno));
+	    goto error;
+	}
     }
 
     memset(rec, 0, sizeof(struct process_rec));
