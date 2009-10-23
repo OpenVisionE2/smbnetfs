@@ -280,7 +280,7 @@ void* event_thread(void *data){
 	sigtimedwait(&signal_set, &siginfo, &timeout);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
-	if (siginfo.si_signo == SIGCHLD) process_cleanup_from_zombies();
+	process_cleanup_from_zombies();
 	if ((siginfo.si_signo == SIGHUP) ||
 	    event_is_time_for_config_update()) event_reread_config();
     }
