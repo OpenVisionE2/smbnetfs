@@ -3,5 +3,4 @@ Current restriction:
 
 Opened questions:
   * is it required to recode username/domain/password from local to samba encoding ?
-  * Linux-2.4 and FreeBSD support status ?
 
