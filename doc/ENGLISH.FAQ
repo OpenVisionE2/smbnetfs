@@ -1,0 +1,175 @@
+List of questions:
+================
+Q1: What about errors and memory leaks in libsmbclient library ?
+Q2: Is where any similar program on the web ?
+Q3: How can I setup a correct working/listing of the files and directories
+    with national characters ?
+Q4: It's takes a lot of time for KDE (gnome terminal) to show
+    group/computers/shares list. What can I do for it ?
+Q5: I have a problem, what should I do ?
+
+QUESTIONS AND ANSWERS
+================
+
+Q1: What about errors and memory leaks in libsmbclient library ?
+
+A1: Starting from SMBNetFS-0.5.0 all interaction with libsmbclient library
+    moved to separate processes (which can be relatively safe killed). So the
+    problems in libsmbclient do not lead to any unpleasant consequences
+    to SMBNetFS or your computer anymore.
+
+----------------------------------------------------------------------------
+
+Q2: Is where any similar program on the web ?
+
+A2: Yes, here is a list.
+
+    1) KDE, GNOME, Xfce.
+
+    2) fusesmb -- http://hannibal.lr-s.tudelft.nl/fusesmb/
+
+       SMB for FUSE is a Network Neighborhood (Samba shares) filesystem.
+       It works like smbfs, but instead of accessing one share at a time,
+       all computers and workgroups are accessible at once from a single
+       filesystem mount, making network browsing just as easy as it is on
+       Windows.
+
+    3) fusemb -- http://yarick.territory.ru/fusemb
+
+       fusemb is an SMB network Unix filesystem hierarchy interconnector 
+       using the fuse filesystem in user space.
+
+    4) smbc -- http://smbc.airm.net
+
+       Samba Commander is a text mode SMB network commander. In SMBC, you
+       can browse the local network or you can use the search function to
+       find the files. You can also download/upload files and directories
+       or create them both locally and remotely. SMBC has a resume function,
+       supports UTF-8 characters, and is multilingual.
+
+    5) xsmbrowser -- http://www.public.iastate.edu/~chadspen/
+
+       xSMBrowser is a tool for navigating SMB Networks (Samba, SMB, CIFS).
+       It retains the features of the program it was based upon (Microsoft's
+       Network Neighborhood), but adds convenient features for Unix users.
+       These include mounting, ability to change networks on-the-fly, and
+       conveniences such as a Stop Button.
+
+    6) smb4k -- http://smb4k.berlios.de/
+
+       Smb4K is a SMB/CIFS share browser for KDE. It uses the Samba software
+       suite to access the SMB/CIFS shares of the local network neighborhood.
+       Its purpose is to provide a program that's easy to use and has as many
+       features as possible.
+
+----------------------------------------------------------------------------
+
+Q3: How can I setup a correct working/listing of the files and directories
+    with national characters ?
+
+A3: In most cases SMBNetFS will work correctly just out of the box, but if
+    something goes wrong here is a short instruction. Replace the word CHARSET
+    with the your local charset and the word DOS_CHARSET with OEM charset
+    (also known as DOS charset) used by Windows in your country. You can find
+    your local charset in the output of locale command (in the most cases
+    it will be UTF-8).
+
+   (RECOMMENDED)
+   =============
+
+     1) Copy file "/etc/samba/smb.conf" to "~/.smb" directory (if there is no
+        such directory, then it should be created first).
+
+	  mkdir -p ~/.smb
+	  cp /etc/samba/smb.conf ~/.smb/smb.conf
+
+     2) Find and replace the values of “unix charset”, “display charset” and
+        “dos charset” in the file “~/.smb/smb.conf” according to values shown
+        below (if there are no such lines in the file, then it should be
+        created).
+
+	  unix charset = utf-8
+	  display charset = utf-8
+	  dos charset = DOS_CHARSET
+
+     3) The file “~/.smb/smbnetfs.conf” should contain the following lines
+        (if there are no such lines in the file, then it should be created).
+
+	  samba_charset  "utf-8"
+	  local_charset  "CHARSET"
+
+   --------------------------------------------------------------
+
+   (NOT RECOMMENDED)
+   =================
+
+     There is another way of configuring SMBNetFS. In this case libsmbclient
+     will use your local charset. As result you can't work with the files that
+     contains characters which have no equivalent in your local charset.
+
+     1) Copy file "/etc/samba/smb.conf" to "~/.smb" directory (if there is no
+        such directory, then it should be created first).
+
+	  mkdir -p ~/.smb
+	  cp /etc/samba/smb.conf ~/.smb/smb.conf
+
+     2) Find and replace the values of “unix charset”, “display charset” and
+        “dos charset” in the file “~/.smb/smb.conf” according to values shown
+        below (if there are no such lines in the file, then it should be
+        created).
+
+	  unix charset = LOCALE
+	  display charset = LOCALE
+	  dos charset = DOS_CHARSET
+
+     3) The file “~/.smb/smbnetfs.conf” should contain the following lines
+        (if there are no such lines in the file, then it should be created).
+
+	  samba_charset  "LOCALE"
+	  local_charset  "LOCALE"
+
+   --------------------------------------------------------------
+
+   (NOT RECOMMENDED)
+   =================
+
+     There is a third way. You can use the internal encoding conversion of
+     libfuse library (require libfuse >= 2.5). In this case you will have the
+     same issue as above (you can't work with the files that contains
+     characters which have no equivalent in your local charset) and also you
+     may not see the samba shares that have national characters in their names.
+
+     Just run SMBNetFS with the following command (it is assumed here what
+     libsmbclient use SAMBA_CHARSET for their work)
+
+	  smbnetfs -o modules=iconv,from_code=SAMBA_CHARSET,to_code=CHARSET mountpoint
+
+----------------------------------------------------------------------------
+
+Q4: It's takes a lot of time for KDE (gnome terminal) to show
+    group/computers/shares list. What can I do for it ?
+
+A4: It's most likely that the problem can be solved with the help of
+    “stat_workaround_depth” configuration parameter (read the detailed
+    description in conf/smbnetfs.conf file of SMBNetFS distribution).
+
+    In short: try to setup “stat_workaround_depth” to the value of 3 or above.
+
+---------------------------------------------------------------------------
+
+Q5: I have a problem, what should I do ?
+
+A5: It's quite often that the cause of errors is the samba and/or SMBNetFS
+    misconfiguration. To understand the cause of the error, set the value of
+    “smbnetfs_debug”  to 5, 6 or 7 (also it maybe useful to setup
+    “smb_query_browsers” to false) and run “smbnetfs” with an additional
+    option "-d". Repeat your steps to reproduce the error. Examine the debug
+    information and try to fix the error by yourself. If it does not help,
+    try to contact with the author (please do not forget the debug output).
+
+    Examples of collecting debug  information:
+
+	  smbnetfs -d -o smbnetfs_debug=7 mountpoint  | tee -o smbnetfs.log
+	  smbnetfs -d -o smbnetfs_debug=7,smb_query_browsers=false mountpoint  | tee -o smbnetfs.log
+
+---------------------------------------------------------------------------

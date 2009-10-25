@@ -2,7 +2,7 @@ SMBNetFS is a Linux/FreeBSD filesystem that allow you to use samba/microsoft
 network in the same manner as the network neighborhood in Microsoft Windows.
 
 Features:
- - Linux-2.6 supported (Linux-2.4 and FreeBSD >= 6.0 ???)
+ - Linux-2.6 and FreeBSD >= 6.0 are supported (Linux-2.4 is not tested)
  - you can use Samba/Microsoft network as a regular unix filesystem
  - workgroup/computer/share entries are dynamically created
  - windows domain supported

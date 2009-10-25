@@ -16,18 +16,20 @@ smbnetfs is a program that mount microsoft windows network.
     make
     make install
 
+4) create your personal smbnetfs configuration
+
     mkdir -p ~/.smb
     cp /etc/samba/smb.conf ~/.smb
     cp conf/smbnetfs.* ~/.smb/
     chmod 600 ~/.smb/smbnetfs.*
 
-4) tune parameters in ~/.smb/smbnetfs.* files
+5) tune parameters in ~/.smb/smbnetfs.* files
 
-5) mount filesystem
+6) mount filesystem
 
     mkdir mountpoint
     smbnetfs mountpoint
 
-6) enjoy ....
+7) enjoy ....
 
     cd mountpoint
