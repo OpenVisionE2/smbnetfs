@@ -226,3 +226,12 @@ New in 0.5.0 (babushka)
   - it's now possible to pass options in command line
   - it's now possible to use alternate config file location
   - bug fixes
+
+New in 0.5.1 (babushka)
+-----------------
+  - support of FreeBSD >= 6.0 (tested on FreeBSD-7.1)
+  - support of Linux-2.4 (not tested)
+  - libsmbclient >= 3.2 is strongly recommended
+  - more correct and verbose libsmbclient version check
+  - fix bug in libsmbclient-3.0 initialization
+  - fix overriding of command line options with the options from config file
