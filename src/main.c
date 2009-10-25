@@ -196,7 +196,7 @@ int main(int argc, char *argv[]){
 	exit(EXIT_FAILURE);
     }
 
-    if (!special_config) reconfigure_read_config(1);
+    reconfigure_read_config(CONFIG_OPT_STARTUP);
     samba_allocate_ctxs();
 
     fuse_main(args.argc, args.argv, &smb_oper, NULL);

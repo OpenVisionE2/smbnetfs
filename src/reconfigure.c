@@ -28,10 +28,13 @@ enum config_read_mode{
     QUOTED
 };
 
-int		special_config		= 0;
+
 const char	*config_dir_postfix	= "/.smb";
 char		config_file[256]	= "smbnetfs.conf";
 char		config_dir[2048]	= "/";
+int		config_cmd_opts_cnt	= 0;
+int		config_cmd_opts_max_cnt	= 32;
+char		**config_cmd_opts	= NULL;
 
 const char *smbnetfs_option_list =
 	"    -o config=PATH               path to config (~/.smb/smbnetfs.conf)\n"
@@ -168,6 +171,42 @@ int reconfigure_set_boolean(char *value, int (*func)(int)){
     else return 0;
 }
 
+int reconfigure_find_cmd_opt(const char *option){
+    int	i;
+
+    for(i = 0; i < config_cmd_opts_cnt; i++){
+	if (strcasecmp(config_cmd_opts[i], option) == 0) return 1;
+    }
+    return 0;
+}
+
+int reconfigure_add_cmd_opt(const char *option){
+    char	*opt;
+    char	**new_ptr;
+    int		new_max_cnt;
+
+    if (reconfigure_find_cmd_opt(option)) return 1;
+
+    if (config_cmd_opts == NULL){
+	config_cmd_opts = malloc(16 * sizeof(char*));
+	if (config_cmd_opts == NULL) return 0;
+	config_cmd_opts_max_cnt = 16;
+    }
+    if (config_cmd_opts_cnt == config_cmd_opts_max_cnt){
+	new_max_cnt = 2 * config_cmd_opts_max_cnt;
+	new_ptr = realloc(config_cmd_opts, new_max_cnt * sizeof(char*));
+	if (new_ptr == NULL) return 0;
+
+	config_cmd_opts_max_cnt = new_max_cnt;
+	config_cmd_opts = new_ptr;
+    }
+
+    opt = strdup(option);
+    if (opt == NULL) return 0;
+    config_cmd_opts[config_cmd_opts_cnt++] = opt;
+    return 1;
+}
+
 int reconfigure_split_line(const char *line,
 				char *arg[], size_t arg_len[], int arg_cnt){
 
@@ -238,7 +277,12 @@ int reconfigure_split_line(const char *line,
     return -1;
 }
 
-int reconfigure_analyse_simple_option(const char *option, char *value, int startup){
+int reconfigure_analyse_simple_option(const char *option, char *value, int flags){
+    if ( ! (flags & CONFIG_OPT_CMDLINE) && reconfigure_find_cmd_opt(option)){
+	DPRINTF(8, "ignore overriding of command line option '%s'.\n", option);
+	return 1;
+    }
+
     /* common.h */
     if (strcasecmp(option, "smbnetfs_debug") == 0)
 	return reconfigure_set_number(value, common_set_smbnetfs_debug_level);
@@ -265,7 +309,7 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int start
 
     /* samba.h */
     if (strcasecmp(option, "max_rw_block_size") == 0){
-	if (!startup) return 1;		/* ignore this option*/
+	if ( ! (flags & CONFIG_OPT_STARTUP)) return 1;	/* ignore this option*/
 	return reconfigure_set_kb_size(value, samba_init);
     }
     if (strcasecmp(option, "max_ctx_count") == 0)
@@ -300,12 +344,14 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int start
 }
 
 int reconfigure_analyse_cmdline_option(const char *option, char *value){
+    int		ret;
+
+    if (reconfigure_find_cmd_opt(option))
+	fprintf(stderr, "WARNING: duplicate option '%s' found.\n", option);
+
     if (strcmp(option, "config") == 0){
 	char	*pos, *name, path[2048];
 	size_t	len;
-
-	if (special_config == 1)
-	    fprintf(stderr, "WARNING: duplicate 'config=file' option found.\n");
 
 	len = 0;
 	memset(path, 0, sizeof(path));
@@ -336,15 +382,19 @@ int reconfigure_analyse_cmdline_option(const char *option, char *value){
 	/* set config file name */
 	if (strlen(name) + 1 > sizeof(config_file)) goto error;
 	strcpy(config_file, name);
-
-	special_config = 1;
+	reconfigure_add_cmd_opt(option);
 	return 1;
 
       error:
+	reconfigure_add_cmd_opt(option);
 	fprintf(stderr, "Can't set alternative configuration file '%s'.\nUse default one instead.\n", value);
 	return 1;
     }
-    return reconfigure_analyse_simple_option(option, value, 1);
+
+    ret = reconfigure_analyse_simple_option(option, value,
+			(CONFIG_OPT_STARTUP | CONFIG_OPT_CMDLINE));
+    if (ret == 1) reconfigure_add_cmd_opt(option);
+    return ret;
 }
 
 /*===========================================================*/
@@ -455,7 +505,7 @@ int reconfigure_parse_group_option(char *value[], int count){
     return (smbitem_mkgroup(value[0], SMBITEM_USER_TREE) == 0);
 }
 
-int reconfigure_read_config_file(const char *filename, int startup){
+int reconfigure_read_config_file(const char *filename, int flags){
     FILE	*file;
     int		cnt, ok_permission;
     char	s[LINE_SIZE];
@@ -511,10 +561,10 @@ int reconfigure_read_config_file(const char *filename, int startup){
 
 	if (cnt == 2){
 	    if (strcasecmp(arg[0], "include") == 0){
-		reconfigure_read_config_file(arg[1], startup);
+		reconfigure_read_config_file(arg[1], flags);
 		continue;
 	    }
-	    if (reconfigure_analyse_simple_option(arg[0], arg[1], startup)) continue;
+	    if (reconfigure_analyse_simple_option(arg[0], arg[1], flags)) continue;
 	}
 	
 	if (strcasecmp(arg[0], "auth") == 0){
@@ -549,6 +599,6 @@ int reconfigure_read_config_file(const char *filename, int startup){
     return 0;
 }
 
-int reconfigure_read_config(int startup){
-    return reconfigure_read_config_file(config_file, startup);
+int reconfigure_read_config(int flags){
+    return reconfigure_read_config_file(config_file, flags);
 }
