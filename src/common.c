@@ -68,12 +68,14 @@ void common_debug_print(int level, const char *fmt, ...){
     if ((level >= 0) && (level <= common_debug_level)){
 	va_start(ap, fmt);
 	vfprintf(stderr, fmt, ap);
+	va_end(ap);
 	fflush(stderr);
 	if (common_stdlog != NULL){
+	    va_start(ap, fmt);
 	    vfprintf(common_stdlog, fmt, ap);
+	    va_end(ap);
 	    fflush(common_stdlog);
 	}
-	va_end(ap);
     }
     pthread_mutex_unlock(&m_common);
 }
