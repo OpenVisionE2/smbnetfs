@@ -1,4 +1,4 @@
-docdir = $(datadir)/doc/smbnetfs
+docdir = $(datadir)/doc/$(distdir)
 doc_DATA = \
 	conf/smbnetfs.conf \
 	doc/ENGLISH.FAQ \
