@@ -260,6 +260,7 @@ void* event_thread(void *data){
     sigset_t		signal_set;
     time_t		start_time;
     struct timespec	timeout;
+    int 		sigret;
 
     (void)data;
 
@@ -277,12 +278,13 @@ void* event_thread(void *data){
 	timeout.tv_sec  = event_get_time_step();
 	timeout.tv_nsec = 0;
 	pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
-	sigtimedwait(&signal_set, &siginfo, &timeout);
+	sigret = sigtimedwait(&signal_set, &siginfo, &timeout);
 	pthread_setcancelstate(PTHREAD_CANCEL_DISABLE, NULL);
 
 	process_cleanup_from_zombies();
-	if ((siginfo.si_signo == SIGHUP) ||
-	    event_is_time_for_config_update()) event_reread_config();
+	if ((sigret != -1 && siginfo.si_signo == SIGHUP)
+	    || event_is_time_for_config_update())
+		event_reread_config();
     }
     return NULL;
 }
