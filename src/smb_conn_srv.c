@@ -16,11 +16,11 @@
 #include "smb_conn_srv.h"
 
 #ifdef PRINTF_DEBUG
-  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
-  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
+  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, (int) getpid(), __FUNCTION__, ## args); fflush(stderr); }
+  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, (int) getpid(), __FUNCTION__, ## args); fflush(stderr); }
 #else
-  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	smb_conn_srv_debug_print(ctx, MESSAGE, 0, level_value, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
-  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	smb_conn_srv_debug_print(ctx, DIE_MSG, errno_value, 0, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
+  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	smb_conn_srv_debug_print(ctx, MESSAGE, 0, level_value, "srv(%d)->%s: " fmt, (int) getpid(), __FUNCTION__, ## args)
+  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	smb_conn_srv_debug_print(ctx, DIE_MSG, errno_value, 0, "srv(%d)->%s: " fmt, (int) getpid(), __FUNCTION__, ## args)
 #endif
 
 #ifndef HAVE_LIBSMBCLIENT_3_2
