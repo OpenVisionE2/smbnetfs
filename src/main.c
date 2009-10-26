@@ -93,7 +93,7 @@ inline size_t get_default_rw_block_size(void){
 
 void sig_handler(int signum){
     fprintf(stderr, "%d->%s: signal %d received\n",
-	getpid(), __FUNCTION__, signum);
+	(int) getpid(), __FUNCTION__, signum);
     common_print_backtrace();
     exit(signum);
 }
