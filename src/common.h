@@ -13,9 +13,9 @@ void common_print_backtrace(void);
 
 #ifdef PRINTF_DEBUG
   #include <stdio.h>
-  #define	DPRINTF(level, fmt, args...)	{ fprintf(stderr, "%d->%s: " fmt, (int) getpid(), __FUNCTION__, ## args); fflush(stderr); }
+  #define	DPRINTF(level, fmt, args...)	{ fprintf(stderr, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
 #else
-  #define	DPRINTF(level, fmt, args...)	common_debug_print(level, "%d->%s: " fmt, (int) getpid(), __FUNCTION__, ## args)
+  #define	DPRINTF(level, fmt, args...)	common_debug_print(level, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
 #endif
 
 #ifndef HAVE_STRNDUP
