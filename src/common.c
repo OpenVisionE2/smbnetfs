@@ -88,7 +88,7 @@ void common_print_backtrace(void){
     size_t		size;
   #endif /* HAVE_BACKTRACE */
 
-    snprintf(buf, sizeof(buf), "%d->%s: dumping ...\n", (int) getpid(), __FUNCTION__);
+    snprintf(buf, sizeof(buf), "%d->%s: dumping ...\n", getpid(), __FUNCTION__);
     buf[sizeof(buf) - 2] = '\n';
     buf[sizeof(buf) - 1] = '\0';
 
