@@ -235,3 +235,10 @@ New in 0.5.1 (babushka)
   - more correct and verbose libsmbclient version check
   - fix bug in libsmbclient-3.0 initialization
   - fix overriding of command line options with the options from config file
+
+New in 0.5.2 (babushka)
+-----------------
+  - fixed SIGSEGV on nondefault log tagret
+  - check sigtimedwaid() return code before checking signal status.
+  - add SMBNetFS version to the standard doc directory name
+  - add printf alike attribute to some functions and minor code reorganization
