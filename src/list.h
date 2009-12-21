@@ -41,6 +41,30 @@ static inline void add_to_list_back(LIST *list, LIST *elem){
     list->prev = elem;
 }
 
+static inline void insert_to_list_after(LIST *list, LIST *elem, LIST *new_elem){
+    (void)list;
+
+    /* Yes, i want SIGSEGV for debug */
+    if ((new_elem->next != NULL) || (new_elem->prev != NULL)) *((char*)NULL) = '\0';
+
+    new_elem->next = elem->next;
+    new_elem->prev = elem;
+    elem->next->prev = new_elem;
+    elem->next = new_elem;
+}
+
+static inline void insert_to_list_before(LIST *list, LIST *elem, LIST *new_elem){
+    (void)list;
+
+    /* Yes, i want SIGSEGV for debug */
+    if ((new_elem->next != NULL) || (new_elem->prev != NULL)) *((char*)NULL) = '\0';
+
+    new_elem->next = elem;
+    new_elem->prev = elem->prev;
+    elem->prev->next = new_elem;
+    elem->prev = new_elem;
+}
+
 static inline void replace_in_list(LIST *list, LIST *elem, LIST *new_elem){
     (void)list;
     new_elem->next = elem->next;

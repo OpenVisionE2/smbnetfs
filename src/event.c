@@ -11,6 +11,7 @@
 #include "auth.h"
 #include "process.h"
 #include "samba.h"
+#include "stat_workaround.h"
 #include "reconfigure.h"
 
 int		event_query_browser_flag	= 1;
@@ -252,6 +253,7 @@ void event_reread_config(void){
     reconfigure_read_config(0);
     smbitem_delete_obsolete(reread_time, SMBITEM_USER_TREE);
     auth_delete_obsolete(reread_time);
+    stat_workaround_delete_obsolete(reread_time);
     event_set_last_config_update(reread_time);
 }
 

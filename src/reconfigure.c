@@ -14,6 +14,7 @@
 #include "process.h"
 #include "smb_conn.h"
 #include "samba.h"
+#include "stat_workaround.h"
 #include "function.h"
 #include "event.h"
 #include "reconfigure.h"
@@ -327,6 +328,12 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int flags
     if (strcasecmp(option, "smb_query_browsers") == 0)
 	return reconfigure_set_boolean(value, event_set_query_browser_flag);
 
+    /* stat_workaround.h */
+    if (strcasecmp(option, "stat_workaround_depth") == 0)
+	return reconfigure_set_number(value, stat_workaround_set_default_depth);
+    if (strcasecmp(option, "stat_workaround_enable_default_entries") == 0)
+	return reconfigure_set_boolean(value, stat_workaround_enable_default_entries);
+
     /* function.h */
     if (strcasecmp(option, "free_space_size") == 0)
 	return reconfigure_set_size(value, function_set_free_space_size);
@@ -336,8 +343,6 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int flags
 	return reconfigure_set_boolean(value, function_set_dollar_share_visibility);
     if (strcasecmp(option, "show_hidden_hosts") == 0)
 	return reconfigure_set_boolean(value, function_set_hidden_hosts_visibility);
-    if (strcasecmp(option, "stat_workaround_depth") == 0)
-	return reconfigure_set_number(value, function_set_stat_workaround_depth);
 
     /* unknown option */
     return 0;
@@ -435,6 +440,35 @@ int reconfigure_parse_auth_option(char *value[], int count){
     password = value[user_pos + 1];
 
     return (auth_store_auth_data(comp, share, domain, user, password) == 0);
+}
+
+int reconfigure_parse_stat_workaround_name_option(char *value[], int count){
+    const char	*case_ptn	= "case_sensitive=";
+    const char	*depth_ptn	= "depth=";
+    int		case_sensitive	= -1;
+    int		depth		= -2;
+    int		i;
+    size_t	len;
+
+    if ((count < 1) || (count > 3)) return 0;
+
+    for(i = 1; i < count; i++){
+	len = strlen(case_ptn);
+	if (strncasecmp(value[i], case_ptn, len) == 0){
+	    if (case_sensitive != -1) return 0;
+	    if (! reconfigure_get_boolean(value[i] + len, &case_sensitive))
+		return 0;
+	}
+	len = strlen(depth_ptn);
+	if (strncasecmp(value[i], depth_ptn, len) == 0){
+	    if (depth != -2) return 0;
+	    if (! reconfigure_get_number(value[i] + len, &depth))
+		return 0;
+	}
+    }
+    if (case_sensitive == -1) case_sensitive = 1;
+
+    return stat_workaround_add_name(value[0], case_sensitive, depth);
 }
 
 int reconfigure_parse_host_option(char *value[], int count){
@@ -559,6 +593,13 @@ int reconfigure_read_config_file(const char *filename, int flags){
 	}
 	if (cnt == 0) continue;
 
+	if (strcasecmp(arg[0], "stat_workaround_name") == 0){
+	    if (reconfigure_parse_stat_workaround_name_option(arg + 1, cnt - 1)) continue;
+	}
+	if (strcasecmp(arg[0], "stat_workaround_exception") == 0){
+	    if ((cnt == 2) && stat_workaround_add_exception(arg[1])) continue;
+	}
+
 	if (cnt == 2){
 	    if (strcasecmp(arg[0], "include") == 0){
 		reconfigure_read_config_file(arg[1], flags);
@@ -566,7 +607,7 @@ int reconfigure_read_config_file(const char *filename, int flags){
 	    }
 	    if (reconfigure_analyse_simple_option(arg[0], arg[1], flags)) continue;
 	}
-	
+
 	if (strcasecmp(arg[0], "auth") == 0){
 	    if (!ok_permission) goto insecure_permission;
 	    /* WARNING: this function can change the contents of arg[i] */
@@ -600,5 +641,9 @@ int reconfigure_read_config_file(const char *filename, int flags){
 }
 
 int reconfigure_read_config(int flags){
-    return reconfigure_read_config_file(config_file, flags);
+    int status;
+
+    status = reconfigure_read_config_file(config_file, flags);
+    stat_workaround_add_default_entries();
+    return status;
 }
