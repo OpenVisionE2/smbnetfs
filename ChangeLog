@@ -242,3 +242,7 @@ New in 0.5.2 (babushka)
   - check sigtimedwaid() return code before checking signal status.
   - add SMBNetFS version to the standard doc directory name
   - add printf alike attribute to some functions and minor code reorganization
+
+New in 0.5.3 (babushka)
+-----------------
+  - generalize stat() workaround
