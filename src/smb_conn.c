@@ -16,6 +16,7 @@
 #include "list.h"
 #include "common.h"
 #include "smbitem.h"
+#include "auth-gnome-keyring.h"
 #include "auth.h"
 #include "smb_conn_proto.h"
 #include "process.h"
@@ -150,12 +151,8 @@ int smb_conn_ctx_destroy(struct smb_conn_ctx *ctx){
     return result;
 }
 
-int smb_conn_send_password(struct smb_conn_ctx *ctx,
-			const char *server, const char *share){
-
-    struct authinfo		*info;
-    char			workgroup[256];
-
+int smb_conn_send_password_base(struct smb_conn_ctx *ctx, const char *domain,
+				const char *user, const char *password){
     ssize_t			bytes;
     struct iovec		iov[5];
     struct smb_conn_query_hdr	header;
@@ -163,29 +160,16 @@ int smb_conn_send_password(struct smb_conn_ctx *ctx,
 
     if ((ctx == NULL) || (ctx->conn_fd == -1)) return -1;
 
-    memset(workgroup, 0, sizeof(workgroup));
-    smbitem_get_group(server, workgroup, sizeof(workgroup));
-    info = auth_get_authinfo(workgroup, server, share);
-    if (info == NULL) return -1;
-    if ((info->domain   == NULL) ||
-	(info->user     == NULL) ||
-	(info->password == NULL)){
-
-	DPRINTF(0, "WARNING!!! Damaged authinfo record\n");
-	auth_release_authinfo(info);
-	return -1;
-    }
-
     iov[0].iov_base = &header;
     iov[0].iov_len  = sizeof(header);
     iov[1].iov_base = &data;
     iov[1].iov_len  = sizeof(data);
-    iov[2].iov_base = info->domain;
-    iov[2].iov_len  = strlen(info->domain) + 1;
-    iov[3].iov_base = info->user;
-    iov[3].iov_len  = strlen(info->user) + 1;
-    iov[4].iov_base = info->password;
-    iov[4].iov_len  = strlen(info->password) + 1;
+    iov[2].iov_base = (char*) domain;
+    iov[2].iov_len  = strlen(domain) + 1;
+    iov[3].iov_base = (char*) user;
+    iov[3].iov_len  = strlen(user) + 1;
+    iov[4].iov_base = (char*) password;
+    iov[4].iov_len  = strlen(password) + 1;
 
     header.query_len   = iov[0].iov_len + iov[1].iov_len +
 			 iov[2].iov_len + iov[3].iov_len + iov[4].iov_len;
@@ -201,8 +185,83 @@ int smb_conn_send_password(struct smb_conn_ctx *ctx,
     }else{
 	bytes = -1;
     }
-    auth_release_authinfo(info);
     return (bytes == (ssize_t) header.query_len) ? 0 : -1;
+}
+
+int smb_conn_send_password(struct smb_conn_ctx *ctx,
+			const char *server, const char *share){
+
+#ifdef HAVE_GNOME_KEYRING
+    struct gnome_keyring_authinfo	*gnome_keyring_info;
+#endif /* HAVE_GNOME_KEYRING */
+    struct authinfo			*config_file_info;
+    int					config_file_info_suitability;
+    char				workgroup[256];
+    int					ret;
+
+    if ((ctx == NULL) || (ctx->conn_fd == -1)) return -1;
+
+    memset(workgroup, 0, sizeof(workgroup));
+    smbitem_get_group(server, workgroup, sizeof(workgroup));
+
+    config_file_info_suitability = -1;
+    config_file_info = auth_get_authinfo(
+				workgroup, server, share,
+				&config_file_info_suitability);
+    if ((config_file_info != NULL) &&
+	((config_file_info->domain   == NULL) ||
+	 (config_file_info->user     == NULL) ||
+	 (config_file_info->password == NULL))){
+
+	DPRINTF(0, "WARNING!!! Damaged authinfo record\n");
+	auth_release_authinfo(config_file_info);
+	config_file_info = NULL;
+	config_file_info_suitability = -1;
+    }
+
+#ifdef HAVE_GNOME_KEYRING
+    gnome_keyring_info = gnome_keyring_get_authinfo(
+				workgroup, server, share);
+    if ((gnome_keyring_info != NULL) &&
+	((gnome_keyring_info->domain   == NULL) ||
+	 (gnome_keyring_info->user     == NULL) ||
+	 (gnome_keyring_info->password == NULL))){
+
+	DPRINTF(0, "WARNING!!! Damaged gnome_keyring_info record\n");
+	gnome_keyring_free_authinfo(gnome_keyring_info);
+	gnome_keyring_info = NULL;
+    }
+
+    if (gnome_keyring_info != NULL){
+	if (gnome_keyring_info->suitability >= config_file_info_suitability){
+	    if (config_file_info != NULL)
+		auth_release_authinfo(config_file_info);
+	    config_file_info = NULL;
+	    config_file_info_suitability = -1;
+	    goto use_gnome_keyring_info;
+	}
+	gnome_keyring_free_authinfo(gnome_keyring_info);
+	gnome_keyring_info = NULL;
+    }
+#endif /* HAVE_GNOME_KEYRING */
+
+    if (config_file_info == NULL) return -1;
+    ret = smb_conn_send_password_base(ctx,
+			config_file_info->domain,
+			config_file_info->user,
+			config_file_info->password);
+    auth_release_authinfo(config_file_info);
+    return ret;
+
+#ifdef HAVE_GNOME_KEYRING
+  use_gnome_keyring_info:
+    ret = smb_conn_send_password_base(ctx,
+			gnome_keyring_info->domain,
+			gnome_keyring_info->user,
+			gnome_keyring_info->password);
+    gnome_keyring_free_authinfo(gnome_keyring_info);
+    return ret;
+#endif /* HAVE_GNOME_KEYRING */
 }
 
 int smb_conn_process_query_lowlevel_va(

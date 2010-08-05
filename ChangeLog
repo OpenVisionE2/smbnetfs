@@ -246,3 +246,4 @@ New in 0.5.2 (babushka)
 New in 0.5.3 (babushka)
 -----------------
   - generalize stat() workaround
+  - allow passwords reading from gnome-keyring

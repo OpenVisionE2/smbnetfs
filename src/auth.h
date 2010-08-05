@@ -16,7 +16,8 @@ void              auth_set_default_login_name(const char *name);
 struct authinfo * auth_get_authinfo(
 				const char *domain,
 				const char *server,
-				const char *share);
+				const char *share,
+				int *suitability);
 void              auth_release_authinfo(struct authinfo *info);
 int               auth_store_auth_data(
 				const char *server_or_domain,

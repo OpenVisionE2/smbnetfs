@@ -4,6 +4,7 @@ smbnetfs_SOURCES = \
 	common.c		common.h		\
 	smbitem.c		smbitem.h		\
 	auth.c			auth.h			\
+	auth-gnome-keyring.c	auth-gnome-keyring.h	\
 	charset.c		charset.h		\
 	smb_conn_proto.h				\
 	smb_conn_srv.c		smb_conn_srv.h		\

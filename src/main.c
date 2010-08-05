@@ -17,6 +17,7 @@
 #include "common.h"
 #include "smbitem.h"
 #include "auth.h"
+#include "auth-gnome-keyring.h"
 #include "process.h"
 #include "samba.h"
 #include "function.h"
@@ -185,6 +186,9 @@ int main(int argc, char *argv[]){
 
     /* init all subsystems with their default values */
     reconfigure_set_default_login_and_configdir();
+#ifdef HAVE_GNOME_KEYRING
+    gnome_keyring_init();
+#endif /* HAVE_GNOME_KEYRING */
     smbitem_init();
     process_init();
     samba_init(1024 * get_default_rw_block_size());
@@ -206,5 +210,8 @@ int main(int argc, char *argv[]){
     auth_delete_obsolete(time(NULL) + 10);
     smbitem_done();
     process_cleanup_from_zombies();
+#ifdef HAVE_GNOME_KEYRING
+    gnome_keyring_done();
+#endif /* HAVE_GNOME_KEYRING */
     return 0;
 }

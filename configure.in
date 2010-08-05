@@ -15,10 +15,15 @@ if test "x$found_setlocale" != "xyes" ; then
     AC_MSG_ERROR([*** No setlocale() implementation found in C library])
 fi
 
+
+export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
+CFLAGS="$CFLAGS -Wall -W"
+LDFLAGS="$LDFLAGS -rdynamic"
+
+
 dnl ***********************
 dnl *** Tests for iconv ***
 dnl ***********************
-
 AC_ARG_WITH(libiconv,
     [AS_HELP_STRING(--with-libiconv=@<:@no/gnu/native@:>@,
 	use the libiconv library)],
@@ -70,18 +75,24 @@ case $with_libiconv in
 	;;
 esac
 
+
 dnl **********************
 dnl *** Tests for fuse ***
 dnl **********************
-
-export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:$PKG_CONFIG_PATH
-#export PKG_CONFIG_PATH=/tmp/s/test/fuse/lib/pkgconfig:$PKG_CONFIG_PATH
-
 PKG_CHECK_MODULES(FUSE, [fuse >= 2.6])
-FUSE_CFLAGS="$CFLAGS -Wall -W -D_REENTRANT $FUSE_CFLAGS"
 LIBS="$LIBS $FUSE_LIBS"
-LDFLAGS="$LDFLAGS -rdynamic"
-CFLAGS="$FUSE_CFLAGS -D_GNU_SOURCE -DFUSE_USE_VERSION=26"
+CFLAGS="$CFLAGS -D_REENTRANT -D_GNU_SOURCE -DFUSE_USE_VERSION=26 $FUSE_CFLAGS"
+
+
+dnl *******************************
+dnl *** Tests for gnome-keyring ***
+dnl *******************************
+PKG_CHECK_MODULES(GNOME_KEYRING, [gnome-keyring-1 >= 2.28],
+	[AC_DEFINE([HAVE_GNOME_KEYRING], [], 
+		[use gnome-keyring as password storage])])
+LIBS="$LIBS $GNOME_KEYRING_LIBS"
+CFLAGS="$CFLAGS $GNOME_KEYRING_CFLAGS"
+
 
 dnl ******************************
 dnl *** Tests for libsmbclient ***

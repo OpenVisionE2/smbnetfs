@@ -6,6 +6,7 @@
 #include <pthread.h>
 #include "list.h"
 #include "common.h"
+#include "auth-gnome-keyring.h"
 #include "auth.h"
 
 struct authitem{
@@ -247,7 +248,8 @@ struct authitem * authitem_get_subitem(
 struct authinfo * auth_get_authinfo(
 				const char *domain,
 				const char *server,
-				const char *share){
+				const char *share,
+				int *suitability){
 
     int			pos;
     struct authitem	*item;
@@ -261,28 +263,40 @@ struct authinfo * auth_get_authinfo(
 
     item = &authroot;
     info = &authinfo_default;
+    *suitability = AUTH_FALLBACK;
     pthread_mutex_lock(&m_auth);
-	if (item->info != NULL) info = item->info;
+	if (item->info != NULL){
+	    info = item->info;
+	    *suitability = AUTH_MATCH_DEFAULT;
+	}
 	if (*domain != '\0'){
 	    pos = authitem_find_subitem(item, domain);
-	    if ((pos >= 0) && (item->childs[pos]->info != NULL))
+	    if ((pos >= 0) && (item->childs[pos]->info != NULL)){
 		info = item->childs[pos]->info;
+		*suitability = AUTH_MATCH_DOMAIN_COMPAT;
+	    }
 	}
 
 	if ((pos = authitem_find_subitem(item, server)) < 0) goto end;
 	item = item->childs[pos];
-	if (item->info != NULL) info = item->info;
+	if (item->info != NULL){
+	    info = item->info;
+	    *suitability = AUTH_MATCH_SERVER;
+	}
 
 	if (*share == '\0') goto end;
 	if ((pos = authitem_find_subitem(item, share)) < 0) goto end;
 	item = item->childs[pos];
-	if (item->info != NULL) info = item->info;
+	if (item->info != NULL){
+	    info = item->info;
+	    *suitability = AUTH_MATCH_RESOURCE;
+	}
 
       end:
         info->ref_count++;
     pthread_mutex_unlock(&m_auth);
-    DPRINTF(10, "domain=%s, user=%s, password=%s\n",
-			info->domain, info->user, auth_fake_password);
+    DPRINTF(10, "domain=%s, user=%s, password=%s, suitability=%d\n",
+		info->domain, info->user, auth_fake_password, *suitability);
     return info;
 }
 
