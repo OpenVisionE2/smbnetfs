@@ -9,8 +9,8 @@ smbnetfs is a program that mount microsoft windows network.
 
 3) compile smbnetfs and copy it somewhere (ex: /usr/local/bin)
 
-    tar xjf ./smbnetfs-0.5.0.tar.bz2
-    cd smbnetfs-0.5.0
+    tar xjf ./smbnetfs-0.5.3.tar.bz2
+    cd smbnetfs-0.5.3
 
     ./configure
     make

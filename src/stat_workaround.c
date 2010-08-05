@@ -283,7 +283,8 @@ int stat_workaround_is_name_ignored(const char *path){
 	min_len = (len <= exception->len) ? len : exception->len;
 	ret = strncmp(exception->path, path, min_len);
 
-	DPRINTF(7, "exception->path=%s, min_len=%d, ret=%d\n", exception->path, min_len, ret);
+	DPRINTF(7, "exception->path=%s, min_len=%d, ret=%d\n",
+			exception->path, (int) min_len, ret);
 
 	if (ret == 0){
 	    if (min_len == len){
