@@ -10,6 +10,7 @@ Features:
  - national character supported
  - in config files you can specify different user/password to access different
    network shares
+ - use gnome keyring as password storage
  - you can access any computer in the world by "cd mountpoint/ip-addr"
    command, where "ip-addr" is the IP address of the desired computer. Do not
    warry that there is no file with such name :-)
