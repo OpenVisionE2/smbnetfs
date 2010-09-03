@@ -138,7 +138,7 @@ void gnome_keyring_init(void){
 	loop = NULL;
     }
     gnome_keyring = GNOME_KEYRING_NOT_AVAILABLE;
-    fprintf(stderr, "gnome-keyring is not available.\n");
+    DPRINTF(1, "gnome-keyring is not available.\n");
     return;
 }
 
