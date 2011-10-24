@@ -365,7 +365,7 @@ int smb_conn_process_query_lowlevel_va(
 	    msg = ((char *) msg_req) + msg_req->msg_offs;
 	    if (bytes != (ssize_t) (strlen(msg) + 1)) goto error;
 
-	    common_debug_print(msg_req->debug_level, msg);
+	    common_debug_print(msg_req->debug_level, "%s", msg);
 
 	    if (reply_hdr->reply_cmd == DIE_MSG){
 		errno = reply_hdr->errno_value;
