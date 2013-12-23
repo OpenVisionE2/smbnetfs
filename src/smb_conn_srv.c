@@ -752,7 +752,6 @@ void smb_conn_srv_unlink(struct smb_conn_srv_ctx *ctx,
 void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 			struct smb_conn_rename_query *query, size_t query_len){
 
-    int				error;
     int				count;
     const char			*old_url;
     const char			*new_url;
@@ -794,7 +793,6 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 	return;
     }
 
-    error = 0;
     if (strcasecmp(new_url, old_url) == 0) goto rename;
 
     /* check the presence of old_url */
