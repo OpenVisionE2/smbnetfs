@@ -252,3 +252,8 @@ New in 0.5.3а (babushka)
 -----------------
   - configure.in: allow user to explicitly enable/disable gnome-keyring support
   - make printing of "gnome-keyring is not available" depending on verbosity level
+
+New in 0.5.3b (babushka)
+-----------------
+  - fix compilation with samba >= 4.0
+  - fix compilation warning

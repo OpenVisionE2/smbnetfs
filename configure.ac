@@ -1,4 +1,4 @@
-AC_INIT([SMBNetFS],[0.5.3а])
+AC_INIT([SMBNetFS],[0.5.3b])
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([src/config.h])
 AC_PROG_CC
