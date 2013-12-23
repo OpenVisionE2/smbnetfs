@@ -110,20 +110,32 @@ dnl ******************************
 dnl *** Tests for libsmbclient ***
 dnl ******************************
 
-#LIBS="/tmp/s/test/libsmbclient.a $FUSE_LIBS -lc -lcrypt -lresolv -lnsl -ldl"
+PKG_CHECK_MODULES(SMBCLIENT, smbclient, [libsmbclient_found=yes], [libsmbclient_found=no])
+if test x"$libsmbclient_found" = xyes; then
+	AC_DEFINE(HAVE_LIBSMBCLIENT_3_2, 1, [Using Samba-3.2 api])
 
-AC_CHECK_LIB(smbclient, smbc_new_context, [], [
-	echo "Error!!! libsmbclient >= 3.0.20 required."
-	exit 1
-])
+	LIBS="$LIBS $SMBCLIENT_LIBS"
+	CFLAGS="$CFLAGS $SMBCLIENT_CFLAGS"
+else
+	#LIBS="/tmp/s/test/libsmbclient.a $FUSE_LIBS -lc -lcrypt -lresolv -lnsl -ldl"
 
-AC_CHECK_LIB(smbclient, smbc_setOptionUserData, 
-    [AC_DEFINE(HAVE_LIBSMBCLIENT_3_2, 1, [Using Samba-3.2 api])],
-    [AC_CHECK_MEMBER(SMBCCTX.close_fn, [], 
-	[echo "Error!!! libsmbclient >= 3.0.20 required."; exit 1],
-	[#include <libsmbclient.h>]
-    )]
-)
+	AC_CHECK_LIB(smbclient, smbc_new_context, [], [
+		echo "Error!!! libsmbclient >= 3.0.20 required."
+		exit 1
+	])
+
+	AC_CHECK_LIB(smbclient, smbc_setOptionUserData,
+	    [AC_DEFINE(HAVE_LIBSMBCLIENT_3_2, 1, [Using Samba-3.2 api])],
+	    [AC_CHECK_MEMBER(SMBCCTX.close_fn, [],
+		[echo "Error!!! libsmbclient >= 3.0.20 required."; exit 1],
+		[#include <libsmbclient.h>]
+	    )]
+	)
+
+	echo ""
+	echo "  Do not use old libsmbclient version, libsmbclient >= 3.2.0 is recommended."
+	echo ""
+fi
 
 dnl ******************
 dnl *** Final step ***
@@ -131,7 +143,3 @@ dnl ******************
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
-
-echo ""
-echo "  Do not use old libsmbclient version, libsmbclient >= 3.2.0 is recommended."
-echo ""
