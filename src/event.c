@@ -112,10 +112,10 @@ int event_is_time_for_smb_tree_scan(void){
 int event_set_config_update_period(int period){
     DPRINTF(7, "period=%d\n", period);
     pthread_mutex_lock(&m_evthread);
-    if (period < event_time_step) period = -1;
+    if ((period != 0) && (period < event_time_step)) period = -1;
     else event_config_update_period = period;
     pthread_mutex_unlock(&m_evthread);
-    return (period > 0) ? 1 : 0;
+    return (period >= 0) ? 1 : 0;
 }
 
 void event_set_last_config_update(time_t update_time){
@@ -128,8 +128,9 @@ int event_is_time_for_config_update(void){
     int flag;
 
     pthread_mutex_lock(&m_evthread);
-    flag = (time(NULL) >= event_last_config_update +
-			  event_config_update_period) ? 1 : 0;
+    flag = ((event_config_update_period > 0) &&
+	    (time(NULL) >= event_last_config_update +
+			  event_config_update_period)) ? 1 : 0;
     pthread_mutex_unlock(&m_evthread);
     return flag;
 }
