@@ -36,16 +36,17 @@ void check_samba_version(void){
 	exit(EXIT_FAILURE);
     }
 
-    if (major < 3) goto unsupported;
   #ifndef HAVE_LIBSMBCLIENT_3_2
+    if (major < 3) goto unsupported;
     if ((major == 3) && (minor < 2)) goto no_truncate;
     else goto please_recompile;
   #else
+    if (major >= 5) goto to_new;
+    if (major == 4) goto ok;
     if (major == 3){
-	if (minor < 2) goto unsupported;
-	else goto ok;
+	if (minor >= 2) goto ok;
+	else goto unsupported;
     }
-    else goto to_new;
   #endif
 
   unsupported:
