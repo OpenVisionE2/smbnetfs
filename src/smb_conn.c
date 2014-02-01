@@ -27,13 +27,13 @@
 #endif
 
 
-int		smb_conn_max_retry_count	= 3;
+int		smb_conn_max_retry_count	= 2;
 int		smb_conn_max_passwd_query_count	= 10;
 int		smb_conn_server_reply_timeout	= 60;
 pthread_mutex_t	m_smb_conn			= PTHREAD_MUTEX_INITIALIZER;
 
 int smb_conn_set_max_retry_count(int count){
-    if (count < 1) return 0;
+    if (count < 0) return 0;
     DPRINTF(7, "count=%d\n", count);
     pthread_mutex_lock(&m_smb_conn);
     smb_conn_max_retry_count = count;
@@ -453,7 +453,7 @@ int smb_conn_process_query(
     va_list		ap;
     int			count, retval, errno_value;
 
-    for(count = 0; count < smb_conn_get_max_retry_count(); count++){
+    for(count = 0; ; count++){
 	if (smb_conn_up_if_broken(ctx) != 0) break;
 
 	va_start(ap, reply_len);
@@ -467,6 +467,8 @@ int smb_conn_process_query(
 	va_end(ap);
 
 	if (retval == 0) return errno_value;
+
+	if (count >= smb_conn_get_max_retry_count()) break;
 	sleep(2);
     }
     return EIO;
@@ -484,7 +486,7 @@ int smb_conn_process_fd_query(
 
     if ((file == NULL) || (file->url == NULL)) return EINVAL;
 
-    for(count = 0; count < smb_conn_get_max_retry_count(); count++){
+    for(count = 0; ; count++){
 	if (smb_conn_up_if_broken(ctx) != 0) break;
 
 	if (file->srv_fd == NULL){
@@ -541,6 +543,7 @@ int smb_conn_process_fd_query(
 	if (retval == 0) return errno_value;
 
       loop_end:
+	if (count >= smb_conn_get_max_retry_count()) break;
 	sleep(2);
     }
     return EIO;
