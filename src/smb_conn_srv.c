@@ -35,6 +35,7 @@
 	((ctx)->callbacks.auth_fn = (ctx_auth_fn##_old))
     #define	smbc_ftruncate(a, b)					\
 	( errno = EINVAL, -1)
+    #define	smbc_setTimeout(ctx, timeout)	do {} while (0)
 #endif
 
 
@@ -204,6 +205,7 @@ void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     SMBCCTX	*ctx;
 
     if ((ctx = smbc_new_context()) == NULL) goto error;
+    smbc_setTimeout(ctx, srv_ctx->smb_timeout);
     smbc_setDebug(ctx, srv_ctx->smb_debug_level);
     smbc_setFunctionAuthDataWithContext(ctx, smb_conn_srv_auth_fn);
     smbc_setOptionUserData(ctx, srv_ctx);
