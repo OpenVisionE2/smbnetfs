@@ -5,6 +5,7 @@
 #include <string.h>
 #include <pthread.h>
 #include <execinfo.h>
+#include <errno.h>
 
 #include "common.h"
 
@@ -33,11 +34,8 @@ int common_get_smbnetfs_debug_level(void){
 }
 
 int common_set_log_file(const char *logfile){
-    int result;
-
     DPRINTF(7, "logfile=%s\n", logfile);
 
-    result = 1;
     pthread_mutex_lock(&m_common);
     if ( ! ((logfile != NULL) && (strcmp(common_logfile, logfile) == 0))){
 	if (common_stdlog != NULL){
@@ -53,12 +51,16 @@ int common_set_log_file(const char *logfile){
 	    common_stdlog = fopen(common_logfile, "a");
 	    if (common_stdlog == NULL){
 		memset(common_logfile, 0, sizeof(common_logfile));
-		result = 0;
+		/* actually we get here if strcmp(common_logfile, logfile) != 0, *
+		 * so we can use variable logfile instead of common_logfile      */
+		pthread_mutex_unlock(&m_common);
+		DPRINTF(0, "Can't open logfile '%s', error : %s.\n", logfile, strerror(errno));
+		return 0;
 	    }
 	}
     }
     pthread_mutex_unlock(&m_common);
-    return result;
+    return 1;
 }
 
 void common_debug_print(int level, const char *fmt, ...){
