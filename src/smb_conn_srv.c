@@ -35,6 +35,7 @@
 	((ctx)->callbacks.auth_fn = (ctx_auth_fn##_old))
     #define	smbc_ftruncate(a, b)					\
 	( errno = EINVAL, -1)
+    #define	smbc_setTimeout(ctx, timeout)	do {} while (0)
 #endif
 
 
@@ -204,6 +205,7 @@ void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     SMBCCTX	*ctx;
 
     if ((ctx = smbc_new_context()) == NULL) goto error;
+    smbc_setTimeout(ctx, srv_ctx->smb_timeout);
     smbc_setDebug(ctx, srv_ctx->smb_debug_level);
     smbc_setFunctionAuthDataWithContext(ctx, smb_conn_srv_auth_fn);
     smbc_setOptionUserData(ctx, srv_ctx);
@@ -468,6 +470,8 @@ void smb_conn_srv_open(struct smb_conn_srv_ctx *ctx,
 	    case EPERM:
 	    case EROFS:
 	    case ETXTBSY:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, OPEN, error, NULL, 0);
 		return;
 	    default:
@@ -527,6 +531,8 @@ void smb_conn_srv_creat(struct smb_conn_srv_ctx *ctx,
 	    case EPERM:
 	    case EROFS:
 	    case ETXTBSY:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, CREAT, error, NULL, 0);
 		return;
 	    default:
@@ -571,6 +577,8 @@ void smb_conn_srv_read(struct smb_conn_srv_ctx *ctx,
 	    case EAGAIN:
 	    case EINTR:
 	    case EISDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		state->offset = (off_t) (-1);
 		smb_conn_srv_send_reply(ctx, READ, errno, NULL, 0);
 		return;
@@ -620,6 +628,8 @@ void smb_conn_srv_write(struct smb_conn_srv_ctx *ctx,
 	    case EIO:
 	    case ENOSPC:
 	    case EISDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		state->offset = (off_t) (-1);
 		smb_conn_srv_send_reply(ctx, WRITE, errno, NULL, 0);
 		return;
@@ -651,6 +661,8 @@ void smb_conn_srv_close(struct smb_conn_srv_ctx *ctx,
     if (smbc_close(state->fd) < 0){
 	switch(errno){
 	    case EINTR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, CLOSE, errno, NULL, 0);
 		return;
 	    default:
@@ -690,6 +702,8 @@ void smb_conn_srv_unlink(struct smb_conn_srv_ctx *ctx,
 	    case ENAMETOOLONG:
 	    case ENOENT:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, UNLINK, errno, NULL, 0);
 		return;
 	    default:
@@ -713,6 +727,8 @@ void smb_conn_srv_unlink(struct smb_conn_srv_ctx *ctx,
 		    case ENOENT:
 		    case ENOTDIR:
 		    case EROFS:
+		    case ETIMEDOUT:
+		    case EHOSTUNREACH:
 			smb_conn_srv_send_reply(ctx, UNLINK, errno, NULL, 0);
 			return;
 		    default:
@@ -734,6 +750,8 @@ void smb_conn_srv_unlink(struct smb_conn_srv_ctx *ctx,
 	    case ENOTDIR:
 	    case EPERM:
 	    case EROFS:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, UNLINK, errno, NULL, 0);
 		return;
 	    default:
@@ -805,6 +823,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 	    case ENAMETOOLONG:
 	    case ENOENT:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, RENAME, errno, NULL, 0);
 		free((char*)new_url);
 		return;
@@ -825,6 +845,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 	    case ELOOP:
 	    case ENAMETOOLONG:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, RENAME, errno, NULL, 0);
 		free((char*)new_url);
 		return;
@@ -856,6 +878,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 		case ENOTDIR:
 		case ENOTEMPTY:
 		case EROFS:
+		case ETIMEDOUT:
+		case EHOSTUNREACH:
 		    smb_conn_srv_send_reply(ctx, RENAME, errno, NULL, 0);
 		    free((char*)new_url);
 		    return;
@@ -881,6 +905,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 		    case ELOOP:
 		    case ENAMETOOLONG:
 		    case EROFS:
+		    case ETIMEDOUT:
+		    case EHOSTUNREACH:
 			smb_conn_srv_send_reply(ctx, RENAME, errno, NULL, 0);
 			free((char*)new_url);
 			return;
@@ -903,6 +929,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 		case ELOOP:
 		case ENAMETOOLONG:
 		case EROFS:
+		case ETIMEDOUT:
+		case EHOSTUNREACH:
 		    smb_conn_srv_send_reply(ctx, UNLINK, errno, NULL, 0);
 		    free((char*)new_url);
 		    return;
@@ -931,6 +959,8 @@ void smb_conn_srv_rename(struct smb_conn_srv_ctx *ctx,
 	    case EPERM:
 	    case EROFS:
 	    case EXDEV:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, RENAME, errno, NULL, 0);
 		free((char*)new_url);
 		return;
@@ -980,6 +1010,8 @@ void smb_conn_srv_opendir(struct smb_conn_srv_ctx *ctx,
 	    case ENOTDIR:
 	    case EPERM:
 	    case ENODEV:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, OPENDIR, error, NULL, 0);
 		return;
 	    default:
@@ -1094,6 +1126,8 @@ void smb_conn_srv_mkdir(struct smb_conn_srv_ctx *ctx,
 	    case ENOTDIR:
 	    case EPERM:
 	    case EROFS:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, MKDIR, errno, NULL, 0);
 		return;
 	    default:
@@ -1134,6 +1168,8 @@ void smb_conn_srv_rmdir(struct smb_conn_srv_ctx *ctx,
 	    case ENOTEMPTY:
 	    case EPERM:
 	    case EROFS:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, RMDIR, errno, NULL, 0);
 		return;
 	    default:
@@ -1170,6 +1206,8 @@ void smb_conn_srv_stat(struct smb_conn_srv_ctx *ctx,
 	    case ENAMETOOLONG:
 	    case ENOENT:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, STAT, errno, NULL, 0);
 		return;
 	    default:
@@ -1204,6 +1242,8 @@ void smb_conn_srv_fstat(struct smb_conn_srv_ctx *ctx,
 	    case ENAMETOOLONG:
 	    case ENOENT:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		state->offset = (off_t) (-1);
 		smb_conn_srv_send_reply(ctx, FSTAT, errno, NULL, 0);
 		return;
@@ -1245,6 +1285,8 @@ void smb_conn_srv_ftruncate(struct smb_conn_srv_ctx *ctx,
 	    case EPERM:
 	    case EROFS:
 	    case ETXTBSY:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		state->offset = (off_t) (-1);
 		smb_conn_srv_send_reply(ctx, FTRUNCATE, errno, NULL, 0);
 		return;
@@ -1285,6 +1327,8 @@ void smb_conn_srv_chmod(struct smb_conn_srv_ctx *ctx,
 	    case ENOTDIR:
 	    case EPERM:
 	    case EROFS:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, CHMOD, errno, NULL, 0);
 		return;
 	    default:
@@ -1319,6 +1363,8 @@ void smb_conn_srv_utimes(struct smb_conn_srv_ctx *ctx,
 	    case ENOENT:
 	    case EPERM:
 	    case EROFS:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, UTIMES, errno, NULL, 0);
 		return;
 	    default:
@@ -1368,6 +1414,8 @@ void smb_conn_srv_setxattr(struct smb_conn_srv_ctx *ctx,
 	    case ELOOP:
 	    case ENAMETOOLONG:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, SETXATTR, errno, NULL, 0);
 		return;
 	    default:
@@ -1416,6 +1464,8 @@ void smb_conn_srv_getxattr(struct smb_conn_srv_ctx *ctx,
 	    case ELOOP:
 	    case ENAMETOOLONG:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, GETXATTR, errno, NULL, 0);
 		return;
 	    default:
@@ -1457,6 +1507,8 @@ void smb_conn_srv_listxattr(struct smb_conn_srv_ctx *ctx,
 	    case ENAMETOOLONG:
 	    case ENOENT:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, LISTXATTR, errno, NULL, 0);
 		return;
 	    default:
@@ -1503,6 +1555,8 @@ void smb_conn_srv_removexattr(struct smb_conn_srv_ctx *ctx,
 	    case ELOOP:
 	    case ENAMETOOLONG:
 	    case ENOTDIR:
+	    case ETIMEDOUT:
+	    case EHOSTUNREACH:
 		smb_conn_srv_send_reply(ctx, REMOVEXATTR, errno, NULL, 0);
 		return;
 	    default:
