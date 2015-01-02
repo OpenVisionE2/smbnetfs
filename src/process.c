@@ -27,7 +27,6 @@ char	process_system_charset[CHARSET_LEN]		= "UTF-8";
 char	process_server_local_charset[CHARSET_LEN]	= "UTF-8";
 char	process_server_samba_charset[CHARSET_LEN]	= "UTF-8";
 int	process_server_listen_timeout			= 300;
-int	process_server_smb_timeout			= 20000;
 int	process_server_smb_debug_level			= 0;
 int	process_start_enabled				= 1;
 
@@ -73,15 +72,6 @@ int process_set_server_listen_timeout(int timeout){
     DPRINTF(7, "timeout=%d\n", timeout);
     pthread_mutex_lock(&m_process);
     process_server_listen_timeout = timeout;
-    pthread_mutex_unlock(&m_process);
-    return 1;
-}
-
-int process_set_server_smb_timeout(int timeout){
-    if (timeout < 1000) return 0;
-    DPRINTF(7, "smb_timeout=%d\n", timeout);
-    pthread_mutex_lock(&m_process);
-    process_server_smb_timeout = timeout;
     pthread_mutex_unlock(&m_process);
     return 1;
 }
@@ -181,7 +171,6 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	srv_ctx.shmem_ptr       = shmem_ptr;
 	srv_ctx.shmem_size      = shmem_size;
 	srv_ctx.timeout         = process_server_listen_timeout;
-	srv_ctx.smb_timeout     = process_server_smb_timeout;
 	srv_ctx.debug_level     = debug_level;
 	srv_ctx.smb_debug_level = process_server_smb_debug_level;
 	srv_ctx.samba_charset   = process_server_samba_charset;

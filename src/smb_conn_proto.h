@@ -180,7 +180,6 @@ struct smb_conn_srv_ctx{
     char			*shmem_ptr;
     size_t			shmem_size;
     int				timeout;
-    int				smb_timeout;
     int				debug_level;
     int				smb_debug_level;
     const char			*local_charset;

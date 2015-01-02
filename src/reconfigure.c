@@ -306,8 +306,6 @@ int reconfigure_analyse_simple_option(const char *option, char *value, int flags
     /* process.h */
     if (strcasecmp(option, "listen_timeout") == 0)
 	return reconfigure_set_number(value, process_set_server_listen_timeout);
-    if (strcasecmp(option, "smb_timeout") == 0)
-	return reconfigure_set_number(value, process_set_server_smb_timeout);
     if (strcasecmp(option, "smb_debug_level") == 0)
 	return reconfigure_set_number(value, process_set_server_smb_debug_level);
     if (strcasecmp(option, "local_charset") == 0)

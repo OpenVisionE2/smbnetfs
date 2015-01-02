@@ -32,17 +32,6 @@ int		smb_conn_max_passwd_query_count	= 10;
 int		smb_conn_server_reply_timeout	= 60;
 pthread_mutex_t	m_smb_conn			= PTHREAD_MUTEX_INITIALIZER;
 
-
-static inline int smb_conn_map_error(int error){
-    switch(error){
-	case EHOSTUNREACH:
-	case ETIMEDOUT:
-	    return EIO;
-	default:
-	    return error;
-    }
-}
-
 int smb_conn_set_max_retry_count(int count){
     if (count < 0) return 0;
     DPRINTF(7, "count=%d\n", count);
@@ -476,7 +465,8 @@ int smb_conn_process_query(
 			reply, reply_len,
 			ap);
 	va_end(ap);
-	if (retval == 0) return smb_conn_map_error(errno_value);
+
+	if (retval == 0) return errno_value;
 
 	if (count >= smb_conn_get_max_retry_count()) break;
 	sleep(2);
@@ -537,8 +527,8 @@ int smb_conn_process_fd_query(
 			&fd_reply, sizeof(fd_reply),
 			file->url, NULL);
 	    if (retval != 0) goto loop_end;
-	    if (errno_value != 0) return smb_conn_map_error(errno_value);
-
+	    if (errno_value != 0) return errno_value;
+	
 	    file->srv_fd = fd_reply.srv_fd;
 	}
 
@@ -550,7 +540,7 @@ int smb_conn_process_fd_query(
 			&errno_value,
 			reply, reply_len,
 			NULL);
-	if (retval == 0) return smb_conn_map_error(errno_value);
+	if (retval == 0) return errno_value;
 
       loop_end:
 	if (count >= smb_conn_get_max_retry_count()) break;
