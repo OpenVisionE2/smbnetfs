@@ -26,11 +26,42 @@
     #define	MAP_ANONYMOUS	MAP_ANON
 #endif
 
+#define SMB_CONN_PROCESS_STATE_UNKNOWN	-1
+#define SMB_CONN_PROCESS_STATE_ALIVE	0
+#define SMB_CONN_PROCESS_STATE_DIED	1
+
+struct smb_conn_query_result{
+    int	errno_value;
+    int process_state;
+};
+
 
 int		smb_conn_max_retry_count	= 2;
 int		smb_conn_max_passwd_query_count	= 10;
 int		smb_conn_server_reply_timeout	= 60;
 pthread_mutex_t	m_smb_conn			= PTHREAD_MUTEX_INITIALIZER;
+
+
+static inline int smb_conn_query_result_map(struct smb_conn_query_result *result){
+    if (result->process_state == SMB_CONN_PROCESS_STATE_ALIVE)
+	return result->errno_value;
+    return EIO;
+}
+
+static inline int smb_conn_query_result_check(struct smb_conn_query_result *result){
+    if (result->process_state == SMB_CONN_PROCESS_STATE_ALIVE)
+	return 1;
+    if (result->process_state == SMB_CONN_PROCESS_STATE_DIED)
+	switch(result->errno_value){
+	    case ETIMEDOUT:
+	    case ECONNREFUSED:
+	    case EHOSTUNREACH:
+		return 1;
+	    default:
+		break;
+	}
+    return 0;
+}
 
 int smb_conn_set_max_retry_count(int count){
     if (count < 0) return 0;
@@ -268,7 +299,7 @@ int smb_conn_process_query_lowlevel_va(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			void *query, size_t query_len,
-			int *errno_value,
+			struct smb_conn_query_result *result,
 			void *reply, size_t reply_len,
 			va_list ap){
 
@@ -279,8 +310,11 @@ int smb_conn_process_query_lowlevel_va(
 
     if ((ctx == NULL) || (ctx->conn_fd == -1) ||
 	((query == NULL) || (query_len == 0)) ||
-	(errno_value == NULL) ||
+	(result == NULL) ||
 	((reply == NULL) && (reply_len != 0))) return EINVAL;
+
+    result->process_state = SMB_CONN_PROCESS_STATE_UNKNOWN;
+    result->errno_value = EINVAL;
 
     iov_cnt = 2;
     query_header.query_cmd = query_cmd;
@@ -368,8 +402,10 @@ int smb_conn_process_query_lowlevel_va(
 	    common_debug_print(msg_req->debug_level, "%s", msg);
 
 	    if (reply_hdr->reply_cmd == DIE_MSG){
-		errno = reply_hdr->errno_value;
-		goto error;
+		result->errno_value   = reply_hdr->errno_value;
+		result->process_state = SMB_CONN_PROCESS_STATE_DIED;
+		smb_conn_connection_close(ctx);
+		return 0;
 	    }
 	    continue;
 	}
@@ -412,7 +448,8 @@ int smb_conn_process_query_lowlevel_va(
 
 	/* ok, we got a reply, store error/reply and exit */
 	if (reply_len != 0) memcpy(reply, reply_hdr + 1, reply_len);
-	*errno_value = reply_hdr->errno_value;
+	result->errno_value   = reply_hdr->errno_value;
+	result->process_state = SMB_CONN_PROCESS_STATE_ALIVE;
 	return 0;
     }
 
@@ -425,7 +462,7 @@ int smb_conn_process_query_lowlevel(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			void *query, size_t query_len,
-			int *errno_value,
+			struct smb_conn_query_result *result,
 			void *reply, size_t reply_len,
 			...){
     va_list	ap;
@@ -436,7 +473,7 @@ int smb_conn_process_query_lowlevel(
 			ctx,
 			query_cmd,
 			query, query_len,
-			errno_value,
+			result,
 			reply, reply_len,
 			ap);
     va_end(ap);
@@ -450,8 +487,9 @@ int smb_conn_process_query(
 			void *reply, size_t reply_len,
 			...){
 
-    va_list		ap;
-    int			count, retval, errno_value;
+    va_list				ap;
+    int					count, retval;
+    struct smb_conn_query_result	result;
 
     for(count = 0; ; count++){
 	if (smb_conn_up_if_broken(ctx) != 0) break;
@@ -461,12 +499,12 @@ int smb_conn_process_query(
 			ctx,
 			query_cmd,
 			query, query_len,
-			&errno_value,
+			&result,
 			reply, reply_len,
 			ap);
 	va_end(ap);
-
-	if (retval == 0) return errno_value;
+	if ((retval == 0) && smb_conn_query_result_check(&result))
+	    return smb_conn_query_result_map(&result);
 
 	if (count >= smb_conn_get_max_retry_count()) break;
 	sleep(2);
@@ -482,7 +520,8 @@ int smb_conn_process_fd_query(
 			void *query, size_t query_len,
 			void *reply, size_t reply_len){
 
-    int			count, retval, errno_value;
+    int					count, retval;
+    struct smb_conn_query_result	result;
 
     if ((file == NULL) || (file->url == NULL)) return EINVAL;
 
@@ -523,11 +562,12 @@ int smb_conn_process_fd_query(
 			ctx,
 			file->reopen_cmd,
 			&fd_query, fd_len,
-			&errno_value,
+			&result,
 			&fd_reply, sizeof(fd_reply),
 			file->url, NULL);
-	    if (retval != 0) goto loop_end;
-	    if (errno_value != 0) return errno_value;
+	    if ((retval != 0) || !smb_conn_query_result_check(&result)) goto loop_end;
+	    if (smb_conn_query_result_map(&result) != 0)
+		return smb_conn_query_result_map(&result);
 	
 	    file->srv_fd = fd_reply.srv_fd;
 	}
@@ -537,10 +577,11 @@ int smb_conn_process_fd_query(
 			ctx,
 			query_cmd,
 			query, query_len,
-			&errno_value,
+			&result,
 			reply, reply_len,
 			NULL);
-	if (retval == 0) return errno_value;
+	if ((retval == 0) && smb_conn_query_result_check(&result))
+	    return smb_conn_query_result_map(&result);
 
       loop_end:
 	if (count >= smb_conn_get_max_retry_count()) break;
@@ -743,15 +784,15 @@ int smb_conn_close(struct smb_conn_ctx *ctx, smb_conn_fd fd){
     if ((file->reopen_cmd == OPEN) && (file->ctx == ctx)){
 	ctx->access_time = time(NULL);
 	if (file->srv_fd != NULL){
-	    int				errno_value;
-	    struct smb_conn_fd_query	query;
+	    struct smb_conn_query_result	result;
+	    struct smb_conn_fd_query		query;
 
 	    query.srv_fd = file->srv_fd;
 	    smb_conn_process_query_lowlevel(
 			ctx,
 			CLOSE,
 			&query, sizeof(query),
-			&errno_value,
+			&result,
 			NULL, 0,
 			NULL);
 	}
@@ -867,15 +908,15 @@ int smb_conn_closedir(struct smb_conn_ctx *ctx, smb_conn_fd fd){
     if ((file->reopen_cmd == OPENDIR) && (file->ctx == ctx)){
 	ctx->access_time = time(NULL);
 	if (file->srv_fd != NULL){
-	    int				errno_value;
-	    struct smb_conn_fd_query	query;
+	    struct smb_conn_query_result	result;
+	    struct smb_conn_fd_query		query;
 
 	    query.srv_fd = file->srv_fd;
 	    smb_conn_process_query_lowlevel(
 			ctx,
 			CLOSEDIR,
 			&query, sizeof(query),
-			&errno_value,
+			&result,
 			NULL, 0,
 			NULL);
 	}
@@ -934,23 +975,22 @@ ssize_t smb_conn_readdir(struct smb_conn_ctx *ctx,
 	    /* connection recovery is not possible */
 	    /* =================================== */
 
-	    int	errno_value = 0;
+	    struct smb_conn_query_result	result;
 
 	    if (file->srv_fd == NULL){
 		errno = EIO;
 		return -1;
 	    }
 
-	    errno_value = 0;
 	    query.srv_fd  = file->srv_fd;
 	    error = smb_conn_process_query_lowlevel(
 			ctx,
 			READDIR,
 			&query, sizeof(query),
-			&errno_value,
+			&result,
 			&reply, sizeof(reply),
 			NULL);
-	    if (error == 0) error = errno_value;
+	    if (error == 0) error = smb_conn_query_result_map(&result);
 	}
 	if ((error == 0) && (reply.bufsize <= (ssize_t) bufsize) &&
 	    (reply.bufsize % sizeof(struct smb_conn_dirent_rec) == 0)){
