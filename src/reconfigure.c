@@ -586,8 +586,7 @@ int reconfigure_read_config_file(const char *filename, int flags){
     DPRINTF(7, "reading file: %s\n", filename);
     if ((file = fopen(filename, "r")) == NULL){
 	int error = errno;
-	DPRINTF((flags & CONFIG_OPT_BASEFILE) ? 3 : 0,
-		"Open file %s error : %s.\n", filename, strerror(error));
+	DPRINTF(3, "Open file %s error : %s.\n", filename, strerror(error));
 	free((char *) filename);
 	errno = error;
 	return -1;
@@ -603,7 +602,10 @@ int reconfigure_read_config_file(const char *filename, int flags){
 	memset(s, 0, sizeof(s));
 	fscanf(file, pattern, s);
 	cnt = reconfigure_split_line(s, arg, arg_len, FIELD_MAX);
-	if (cnt < 0) goto syntax_error;
+	if (cnt < 0){
+	    DPRINTF(0, "Error: (file: %s), Syntax error at pos=%d in line : %s\n", filename, -(cnt + 1), s);
+	    continue;
+	}
 	if (cnt == 0) continue;
 
 	if (strcasecmp(arg[0], "stat_workaround_name") == 0){
@@ -615,14 +617,7 @@ int reconfigure_read_config_file(const char *filename, int flags){
 
 	if (cnt == 2){
 	    if (strcasecmp(arg[0], "include") == 0){
-		int nested_flags = flags & ~CONFIG_OPT_BASEFILE;
-		if (reconfigure_read_config_file(arg[1], nested_flags) != 0){
-		    int error = errno;
-		    fclose(file);
-		    free((char *) filename);
-		    errno = error;
-		    return -1;
-		}
+		reconfigure_read_config_file(arg[1], flags);
 		continue;
 	    }
 	    if (reconfigure_analyse_simple_option(arg[0], arg[1], flags)) continue;
@@ -646,21 +641,14 @@ int reconfigure_read_config_file(const char *filename, int flags){
 	    if (reconfigure_parse_group_option(arg + 1, cnt - 1)) continue;
 	}
 
-      syntax_error:
 	DPRINTF(0, "Error: (file: %s) Invalid input line : %s\n", filename, s);
-	fclose(file);
-	free((char *) filename);
-	errno = EILSEQ;
-	return -1;
-
+	continue;
+	
       insecure_permission:
 	DPRINTF(0, "Error: Insecure config file permission.\n"
 	    "Can't apply '%s' directive.\n"
 	    "Run 'chmod 600 %s' to fix it.\n", arg[0], filename);
-	fclose(file);
-	free((char *) filename);
-	errno = EACCES;
-	return -1;
+        continue;
     }
     fclose(file);
     free((char *) filename);
@@ -670,7 +658,7 @@ int reconfigure_read_config_file(const char *filename, int flags){
 int reconfigure_read_config(int flags){
     int status;
 
-    status = reconfigure_read_config_file(config_file, flags | CONFIG_OPT_BASEFILE);
+    status = reconfigure_read_config_file(config_file, flags);
     stat_workaround_add_default_entries();
     return status;
 }

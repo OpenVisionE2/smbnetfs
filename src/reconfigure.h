@@ -5,7 +5,6 @@
 
 #define CONFIG_OPT_STARTUP	0x01
 #define CONFIG_OPT_CMDLINE	0x02
-#define CONFIG_OPT_BASEFILE	0x04
 
 extern const char	*smbnetfs_option_list;
 
