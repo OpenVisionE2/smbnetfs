@@ -41,7 +41,7 @@
 void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx,
 				enum smb_conn_cmd msg_type,
 				int errno_value,
-				int level,
+				int level, int no_fallback,
 				const char *fmt, ...){
 
     static char			buf[COMM_BUF_SIZE];
@@ -65,11 +65,11 @@ void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx,
 			errno_value, level, buf) == 0) return;
 
   fallback:
+    if (no_fallback) return;
     va_start(ap, fmt);
     vfprintf(stderr, fmt, ap);
     fflush(stderr);
     va_end(ap);
-    return;
 }
 
 void smb_conn_srv_auth_fn(SMBCCTX *ctx,

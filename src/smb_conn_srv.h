@@ -27,8 +27,8 @@ struct smb_conn_srv_fd{
 void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx,
 				enum smb_conn_cmd msg_type,
 				int errno_value,
-				int level,
-				const char *fmt, ...) ATTRIB((format(printf, 5, 6)));
+				int level, int no_fallback,
+				const char *fmt, ...) ATTRIB((format(printf, 6, 7)));
 
 void smb_conn_srv_send_reply(struct smb_conn_srv_ctx *ctx,
 				enum smb_conn_cmd query_cmd,
@@ -69,11 +69,17 @@ inline const char* smb_conn_srv_get_url_from_query(const void *query, size_t url
 
 #ifdef PRINTF_DEBUG
   #include <stdio.h>
-  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
-  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	{ fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
+  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	{ \
+								    fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); \
+								    smb_conn_srv_debug_print(ctx, MESSAGE, 0, level_value, 1, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); \
+								}
+  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	{ \
+								    fprintf(stderr, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); \
+								    smb_conn_srv_debug_print(ctx, DIE_MSG, errno_value, 0, 1, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args); \
+								}
 #else
-  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	smb_conn_srv_debug_print(ctx, MESSAGE, 0, level_value, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
-  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	smb_conn_srv_debug_print(ctx, DIE_MSG, errno_value, 0, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
+  #define	DSRVPRINTF(ctx, level_value, fmt, args...)	smb_conn_srv_debug_print(ctx, MESSAGE, 0, level_value, 0, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
+  #define	DSRVDIEMSG(ctx, errno_value, fmt, args...)	smb_conn_srv_debug_print(ctx, DIE_MSG, errno_value, 0, 0, "srv(%d)->%s: " fmt, getpid(), __FUNCTION__, ## args)
 #endif
 
 #endif /* __SMB_CONN_SRV_H__ */
