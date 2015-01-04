@@ -4,11 +4,11 @@
 #include <string.h>
 #include "charset.h"
 
-char	charset_buf[CHARSET_BUF_SIZE];
+static char	charset_buf[CHARSET_BUF_SIZE];
 
-char	charset_hex_digit[]	= "0123456789ABCDEF";
-iconv_t charset_local2samba	= (iconv_t) (-1);
-iconv_t charset_samba2local	= (iconv_t) (-1);
+static char	charset_hex_digit[]	= "0123456789ABCDEF";
+static iconv_t	charset_local2samba	= (iconv_t) (-1);
+static iconv_t	charset_samba2local	= (iconv_t) (-1);
 
 
 int charset_init(const char *local, const char *samba){
@@ -24,7 +24,7 @@ int charset_init(const char *local, const char *samba){
     return 0;
 }
 
-char * charset_samba_to_local(iconv_t cd,
+static char * charset_samba_to_local(iconv_t cd,
 				const char *str, size_t str_len,
 				char *buf, size_t buf_len){
     size_t	i, r, len, out_len;
@@ -83,7 +83,7 @@ char * charset_samba_to_local(iconv_t cd,
     return buf;
 }
 
-char * charset_local_to_samba(iconv_t cd,
+static char * charset_local_to_samba(iconv_t cd,
 				const char *str, size_t str_len,
 				char *buf, size_t buf_len){
     size_t	i, r, len, out_len;

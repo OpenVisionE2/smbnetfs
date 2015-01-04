@@ -13,6 +13,7 @@
 #ifdef HAVE_SETXATTR
   #include <sys/xattr.h>
 #endif
+#include <glib.h>
 
 #include "common.h"
 #include "smbitem.h"
@@ -20,95 +21,70 @@
 #include "stat_workaround.h"
 #include "function.h"
 
-size_t		function_free_space_size	= 0;
-int		function_quiet_flag		= 1;
-int		function_show_dollar_shares	= 0;
-int		function_show_hidden_hosts	= 0;
+static size_t		function_free_space_size	= 0;
+static int		function_quiet_flag		= 1;
+static int		function_show_dollar_shares	= 0;
+static int		function_show_hidden_hosts	= 0;
 
-pthread_mutex_t	m_function		= PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t	m_function		= PTHREAD_MUTEX_INITIALIZER;
 
 int function_set_free_space_size(size_t blocks_count){
-    DPRINTF(7, "blocks_count=%d\n", (int) blocks_count);
+    DPRINTF(7, "blocks_count=%zd\n", blocks_count);
     pthread_mutex_lock(&m_function);
     function_free_space_size = blocks_count;
     pthread_mutex_unlock(&m_function);
     return 1;
 }
 
-size_t function_get_free_space_size(void){
+static size_t function_get_free_space_size(void){
     size_t blocks_count;
 
     pthread_mutex_lock(&m_function);
     blocks_count = function_free_space_size;
     pthread_mutex_unlock(&m_function);
-    DPRINTF(7, "blocks_count=%d\n", (int) blocks_count);
     return blocks_count;
 }
 
 int function_set_quiet_flag(int flag){
     DPRINTF(7, "flag=%d\n", flag);
-    pthread_mutex_lock(&m_function);
-    function_quiet_flag = flag;
-    pthread_mutex_unlock(&m_function);
+    g_atomic_int_set(&function_quiet_flag, flag);
     return 1;
 }
 
-int function_get_quiet_flag(void){
-    int flag;
-
-    pthread_mutex_lock(&m_function);
-    flag = function_quiet_flag;
-    pthread_mutex_unlock(&m_function);
-    DPRINTF(7, "flag=%d\n", flag);
-    return flag;
+static inline int function_get_quiet_flag(void){
+    return g_atomic_int_get(&function_quiet_flag);
 }
 
 int function_set_dollar_share_visibility(int flag){
     DPRINTF(7, "flag=%d\n", flag);
-    pthread_mutex_lock(&m_function);
-    function_show_dollar_shares = flag;
-    pthread_mutex_unlock(&m_function);
+    g_atomic_int_set(&function_show_dollar_shares, flag);
     return 1;
 }
 
-int function_get_dollar_share_visibility(void){
-    int flag;
-
-    pthread_mutex_lock(&m_function);
-    flag = function_show_dollar_shares;
-    pthread_mutex_unlock(&m_function);
-    DPRINTF(7, "flag=%d\n", flag);
-    return flag;
+static inline int function_get_dollar_share_visibility(void){
+    return g_atomic_int_get(&function_show_dollar_shares);
 }
 
 int function_set_hidden_hosts_visibility(int flag){
     DPRINTF(7, "flag=%d\n", flag);
-    pthread_mutex_lock(&m_function);
-    function_show_hidden_hosts = flag;
-    pthread_mutex_unlock(&m_function);
+    g_atomic_int_set(&function_show_hidden_hosts, flag);
     return 1;
 }
 
-int function_get_hidden_hosts_visibility(void){
-    int flag;
-
-    pthread_mutex_lock(&m_function);
-    flag = function_show_hidden_hosts;
-    pthread_mutex_unlock(&m_function);
-    DPRINTF(7, "flag=%d\n", flag);
-    return flag;
+static inline int function_get_hidden_hosts_visibility(void){
+    return g_atomic_int_get(&function_show_hidden_hosts);
 }
 
-inline int function_check_xattr_name(const char *name){
+static inline int function_check_xattr_name(const char *name){
     static char	*xattr_name = "system.nt_sec_desc.";
     return (strncmp(name, xattr_name, strlen(xattr_name)) == 0);
 }
 
-inline samba_fd function_get_fd(struct fuse_file_info *fi){
+static inline samba_fd function_get_fd(struct fuse_file_info *fi){
     return (samba_fd) fi->fh;
 }
 
-inline void function_store_fd(struct fuse_file_info *fi, samba_fd fd){
+static inline void function_store_fd(struct fuse_file_info *fi, samba_fd fd){
     fi->fh = (uint64_t) fd;
 }
 
@@ -141,7 +117,7 @@ static int function_read(const char *path, char *buf, size_t size, off_t offset,
     int		result;
     samba_fd	fd;
 
-    DPRINTF(5, "(%s, %d, fh=%llx, offset=%lld, flags=%o)\n", path, (int) size,
+    DPRINTF(5, "(%s, %zd, fh=%llx, offset=%lld, flags=%o)\n", path, size,
 	(long long) fi->fh, (long long) offset, fi->flags);
 
     if ((fd = function_get_fd(fi)) == NULL) return -EBADF;
@@ -155,7 +131,7 @@ static int function_write(const char *path, const char *buf, size_t size,
     int		result;
     samba_fd	fd;
 
-    DPRINTF(5, "(%s, %d, fh=%llx, offset=%lld, flags=%o)\n", path, (int) size,
+    DPRINTF(5, "(%s, %zd, fh=%llx, offset=%lld, flags=%o)\n", path, size,
 	(long long) fi->fh, (long long) offset, fi->flags);
 
     if ((fd = function_get_fd(fi)) == NULL) return -EBADF;
@@ -519,8 +495,8 @@ static int function_utimes(const char *path, struct utimbuf *buffer){
 /* libfuse does not support lsetxattr() and fsetxattr(), but samba does */
 static int function_setxattr(const char *path, const char *name,
 			    const char *value, size_t size, int flags){
-    DPRINTF(5, "(%s, name=%s, value=%s, size=%d, flags=%o)\n", path,
-	name, value, (int) size, flags);
+    DPRINTF(5, "(%s, name=%s, value=%s, size=%zd, flags=%o)\n", path,
+	name, value, size, flags);
     if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
     if (!function_check_xattr_name(name)) return -ENOTSUP;
     if (samba_setxattr(path, name, value, size, flags) != 0) return -errno;
@@ -530,7 +506,7 @@ static int function_setxattr(const char *path, const char *name,
 /* libfuse does not support lgetxattr() and fgetxattr(), but samba does */
 static int function_getxattr(const char *path, const char *name,
 			    char *value, size_t size){
-    DPRINTF(5, "(%s, name=%s, size=%d)\n", path, name, (int) size);
+    DPRINTF(5, "(%s, name=%s, size=%zd)\n", path, name, size);
     if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
     if (!function_check_xattr_name(name)) return -ENOTSUP;
     if (samba_getxattr(path, name, value, size) != 0) return -errno;
@@ -539,7 +515,7 @@ static int function_getxattr(const char *path, const char *name,
 
 /* libfuse does not support llistxattr() and flistxattr(), but samba does */
 static int function_listxattr(const char *path, char *list, size_t size){
-    DPRINTF(5, "(%s, size=%d)\n", path, (int) size);
+    DPRINTF(5, "(%s, size=%zd)\n", path, size);
     if (smbitem_what_is(path) != SMBITEM_SMB_SHARE_ITEM) return -ENOTSUP;
     if (samba_listxattr(path, list, size) != 0) return -errno;
     return 0;
@@ -555,7 +531,7 @@ static int function_removexattr(const char *path, const char *name){
 }
 
 static int function_readlink(const char *path, char *buf, size_t size){
-    DPRINTF(5, "(%s, %d)\n", path, (int) size);
+    DPRINTF(5, "(%s, %zd)\n", path, size);
     if (smbitem_what_is(path) != SMBITEM_SMBNETFS_LINK) return -EINVAL;
     if (smbitem_readlink(path, buf, size) != 0) return -EINVAL;
     return 0;

@@ -63,7 +63,7 @@ void smb_conn_srv_getxattr   (struct smb_conn_srv_ctx *ctx, struct smb_conn_getx
 void smb_conn_srv_listxattr  (struct smb_conn_srv_ctx *ctx, struct smb_conn_listxattr_query   *query, size_t query_len);
 void smb_conn_srv_removexattr(struct smb_conn_srv_ctx *ctx, struct smb_conn_removexattr_query *query, size_t query_len);
 
-inline const char* smb_conn_srv_get_url_from_query(const void *query, size_t url_offs){
+static inline const char* smb_conn_srv_get_url_from_query(const void *query, size_t url_offs){
     return  ((const char *) query) + url_offs;
 }
 

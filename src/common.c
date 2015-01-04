@@ -6,31 +6,20 @@
 #include <pthread.h>
 #include <execinfo.h>
 #include <errno.h>
+#include <glib.h>
 
 #include "common.h"
 
-int		common_debug_level	= 0;
-FILE*		common_stdlog		= NULL;
-char		common_logfile[256]	= "";
-pthread_mutex_t	m_common		= PTHREAD_MUTEX_INITIALIZER;
+int			common_debug_level	= 0;
+static FILE*		common_stdlog		= NULL;
+static char		common_logfile[256]	= "";
+static pthread_mutex_t	m_common		= PTHREAD_MUTEX_INITIALIZER;
 
 int common_set_smbnetfs_debug_level(int level){
     if ((level < 0) || (level > 10)) return 0;
     DPRINTF(8, "level=%d\n", level);
-    pthread_mutex_lock(&m_common);
-    common_debug_level = level;
-    pthread_mutex_unlock(&m_common);
+    g_atomic_int_set(&common_debug_level, level);
     return 1;
-}
-
-int common_get_smbnetfs_debug_level(void){
-    int	level;
-
-    pthread_mutex_lock(&m_common);
-    level = common_debug_level;
-    pthread_mutex_unlock(&m_common);
-    DPRINTF(8, "level=%d\n", level);
-    return level;
 }
 
 int common_set_log_file(const char *logfile){
@@ -63,21 +52,19 @@ int common_set_log_file(const char *logfile){
     return 1;
 }
 
-void common_debug_print(int level, const char *fmt, ...){
+void common_debug_print(const char *fmt, ...){
     va_list	ap;
 
     pthread_mutex_lock(&m_common);
-    if ((level >= 0) && (level <= common_debug_level)){
+    va_start(ap, fmt);
+    vfprintf(stderr, fmt, ap);
+    va_end(ap);
+    fflush(stderr);
+    if (common_stdlog != NULL){
 	va_start(ap, fmt);
-	vfprintf(stderr, fmt, ap);
+	vfprintf(common_stdlog, fmt, ap);
 	va_end(ap);
-	fflush(stderr);
-	if (common_stdlog != NULL){
-	    va_start(ap, fmt);
-	    vfprintf(common_stdlog, fmt, ap);
-	    va_end(ap);
-	    fflush(common_stdlog);
-	}
+	fflush(common_stdlog);
     }
     pthread_mutex_unlock(&m_common);
 }

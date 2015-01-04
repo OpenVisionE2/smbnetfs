@@ -20,12 +20,12 @@ struct authitem{
     };
 };
 
-char		auth_login[64]		= "guest";
-char		*auth_fake_password	= "********";
-struct authinfo	authinfo_default	= {{NULL, NULL}, 1, "", auth_login, ""};
-LIST		authinfo_list		= STATIC_LIST_INITIALIZER(authinfo_list);
-struct authitem	authroot		= {NULL, (time_t) 0, NULL, {0, 0, NULL}};
-pthread_mutex_t	m_auth			= PTHREAD_MUTEX_INITIALIZER;
+static char		auth_login[64]		= "guest";
+static char		*auth_fake_password	= "********";
+static struct authinfo	authinfo_default	= {{NULL, NULL}, 1, "", auth_login, ""};
+static LIST		authinfo_list		= STATIC_LIST_INITIALIZER(authinfo_list);
+static struct authitem	authroot		= {NULL, (time_t) 0, NULL, {0, 0, NULL}};
+static pthread_mutex_t	m_auth			= PTHREAD_MUTEX_INITIALIZER;
 
 
 void auth_set_default_login_name(const char *name){
@@ -34,7 +34,7 @@ void auth_set_default_login_name(const char *name){
     DPRINTF(5, "login=%s\n", auth_login);
 }
 
-struct authinfo * authinfo_create_new(
+static struct authinfo * authinfo_create_new(
 				const char *domain,
 				const char *user,
 				const char *password){
@@ -62,7 +62,7 @@ static inline void authinfo_delete(struct authinfo *info){
     free(info);
 }
 
-inline int authinfo_compare(struct authinfo *info,
+static inline int authinfo_compare(struct authinfo *info,
 				const char *domain,
 				const char *user,
 				const char *password){
@@ -71,7 +71,7 @@ inline int authinfo_compare(struct authinfo *info,
 	    (strcmp(info->password, password) == 0));
 }
 
-struct authinfo * authinfo_find_in_list(
+static struct authinfo * authinfo_find_in_list(
 				const char *domain,
 				const char *user,
 				const char *password){
@@ -88,7 +88,7 @@ struct authinfo * authinfo_find_in_list(
     return NULL;
 }
 
-struct authinfo * authinfo_store_list(
+static struct authinfo * authinfo_store_list(
 				const char *domain,
 				const char *user,
 				const char *password){
@@ -111,7 +111,7 @@ struct authinfo * authinfo_store_list(
     return info;
 }
 
-void authinfo_release(struct authinfo *info){
+static void authinfo_release(struct authinfo *info){
     info->ref_count--;
     if (info->ref_count == 0){
 	remove_from_list(&authinfo_list, &info->entries);
@@ -119,7 +119,7 @@ void authinfo_release(struct authinfo *info){
     }
 }
 
-struct authitem* authitem_create_item(const char *name){
+static struct authitem* authitem_create_item(const char *name){
     struct authitem	*item;
 
     item = malloc(sizeof(struct authitem) + strlen(name) + 1);
@@ -138,7 +138,7 @@ static inline void authitem_delete_item(struct authitem *item){
     free(item);
 }
 
-void authitem_delete_obsolete_items(struct authitem *item, time_t threshold){
+static void authitem_delete_obsolete_items(struct authitem *item, time_t threshold){
     int		i;
 
     for(i = item->child_cnt - 1; i >= 0; i--){
@@ -175,7 +175,7 @@ void authitem_delete_obsolete_items(struct authitem *item, time_t threshold){
  *   b) negative value -(pos+1), if item was not found,
  *      where 'pos' is the position to insert the new element
  */
-int authitem_find_subitem(struct authitem *item, const char *name){
+static int authitem_find_subitem(struct authitem *item, const char *name){
     int		first = 0, last = item->child_cnt - 1;
 
     while(first <= last){
@@ -197,7 +197,7 @@ int authitem_find_subitem(struct authitem *item, const char *name){
  *   a) zero, if no errors
  *   b) (-1), if insertion failed
  */
-int authitem_insert_subitem(struct authitem *item,
+static int authitem_insert_subitem(struct authitem *item,
 				struct authitem *subitem, int pos){
     if ((pos > item->child_cnt) || (pos < 0)) return -1;
 
@@ -225,7 +225,7 @@ int authitem_insert_subitem(struct authitem *item,
     return 0;
 }
 
-struct authitem * authitem_get_subitem(
+static struct authitem * authitem_get_subitem(
 				struct authitem *item,
 				const char *name){
     int			pos;

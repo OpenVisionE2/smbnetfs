@@ -25,7 +25,7 @@
 #include "reconfigure.h"
 
 
-void check_samba_version(void){
+static void check_samba_version(void){
     const char	*samba_version;
     int		major, minor;
 
@@ -89,18 +89,18 @@ void check_samba_version(void){
 #endif
 }
 
-inline size_t get_default_rw_block_size(void){
+static inline size_t get_default_rw_block_size(void){
     return (strncmp(smbc_version(), "3.0.", 4) == 0) ? 48 : 128;
 }
 
-void sig_handler(int signum){
+static void sig_handler(int signum){
     fprintf(stderr, "%d->%s: signal %d received\n",
 	getpid(), __FUNCTION__, signum);
     common_print_backtrace();
     exit(signum);
 }
 
-void set_signal_reactions(void){
+static void set_signal_reactions(void){
     struct{
 	int	signum;
 	char	*name;
@@ -130,7 +130,7 @@ void set_signal_reactions(void){
     }
 }
 
-void print_help(struct fuse_args *outargs){
+static void print_help(struct fuse_args *outargs){
     fprintf(stderr,
 	"usage: %s mountpoint [options]\n"
 	"\n"

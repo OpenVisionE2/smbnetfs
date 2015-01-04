@@ -31,12 +31,12 @@ enum config_read_mode{
 };
 
 
-const char	*config_dir_postfix	= "/.smb";
-char		config_file[256]	= "smbnetfs.conf";
-char		config_dir[2048]	= "/";
-int		config_cmd_opts_cnt	= 0;
-int		config_cmd_opts_max_cnt	= 32;
-char		**config_cmd_opts	= NULL;
+static const char	*config_dir_postfix	= "/.smb";
+static char		config_file[256]	= "smbnetfs.conf";
+static char		config_dir[2048]	= "/";
+static int		config_cmd_opts_cnt	= 0;
+static int		config_cmd_opts_max_cnt	= 32;
+static char		**config_cmd_opts	= NULL;
 
 const char *smbnetfs_option_list =
 	"    -o config=PATH               path to config (~/.smb/smbnetfs.conf)\n"
@@ -67,7 +67,7 @@ const char *smbnetfs_option_list =
 	"    -o max_passwd_query_count=N  See in documentation (10)\n";
 
 
-void reconfigure_set_config_dir(const char *path){
+static void reconfigure_set_config_dir(const char *path){
     struct stat buf;
 
     if (strlen(path) + 2 > sizeof(config_dir)){
@@ -121,7 +121,7 @@ void reconfigure_set_default_login_and_configdir(void){
     reconfigure_set_config_dir(buf);
 }
 
-int reconfigure_get_number(char *value, int *result){
+static int reconfigure_get_number(char *value, int *result){
     char *endptr;
 
     *result = strtol(value, &endptr, 0);
@@ -129,14 +129,14 @@ int reconfigure_get_number(char *value, int *result){
     else return 0;
 }
 
-int reconfigure_set_number(char *value, int (*func)(int)){
+static int reconfigure_set_number(char *value, int (*func)(int)){
     int result;
 
     if (reconfigure_get_number(value, &result)) return func(result);
     else return 0;
 }
 
-int reconfigure_get_size(char *value, size_t *result){
+static int reconfigure_get_size(char *value, size_t *result){
     char *endptr;
 
     *result = strtol(value, &endptr, 0);
@@ -144,21 +144,21 @@ int reconfigure_get_size(char *value, size_t *result){
     else return 0;
 }
 
-int reconfigure_set_size(char *value, int (*func)(size_t)){
+static int reconfigure_set_size(char *value, int (*func)(size_t)){
     size_t result;
 
     if (reconfigure_get_size(value, &result)) return func(result);
     else return 0;
 }
 
-int reconfigure_set_kb_size(char *value, int (*func)(size_t)){
+static int reconfigure_set_kb_size(char *value, int (*func)(size_t)){
     size_t result;
 
     if (reconfigure_get_size(value, &result)) return func(result * 1024);
     else return 0;
 }
 
-int reconfigure_get_boolean(char *value, int *result){
+static int reconfigure_get_boolean(char *value, int *result){
     if ((strcasecmp(value, "true") == 0) || (strcasecmp(value, "yes") == 0)){
 	*result = 1;
 	return 1;
@@ -170,14 +170,14 @@ int reconfigure_get_boolean(char *value, int *result){
     return 0;
 }
 
-int reconfigure_set_boolean(char *value, int (*func)(int)){
+static int reconfigure_set_boolean(char *value, int (*func)(int)){
     int result;
 
     if (reconfigure_get_boolean(value, &result)) return func(result);
     else return 0;
 }
 
-int reconfigure_find_cmd_opt(const char *option){
+static int reconfigure_find_cmd_opt(const char *option){
     int	i;
 
     for(i = 0; i < config_cmd_opts_cnt; i++){
@@ -186,7 +186,7 @@ int reconfigure_find_cmd_opt(const char *option){
     return 0;
 }
 
-int reconfigure_add_cmd_opt(const char *option){
+static int reconfigure_add_cmd_opt(const char *option){
     char	*opt;
     char	**new_ptr;
     int		new_max_cnt;
@@ -213,7 +213,7 @@ int reconfigure_add_cmd_opt(const char *option){
     return 1;
 }
 
-int reconfigure_split_line(const char *line,
+static int reconfigure_split_line(const char *line,
 				char *arg[], size_t arg_len[], int arg_cnt){
 
     enum config_read_mode	mode;
@@ -283,7 +283,7 @@ int reconfigure_split_line(const char *line,
     return -1;
 }
 
-int reconfigure_analyse_simple_option(const char *option, char *value, int flags){
+static int reconfigure_analyse_simple_option(const char *option, char *value, int flags){
     if ( ! (flags & CONFIG_OPT_CMDLINE) && reconfigure_find_cmd_opt(option)){
 	DPRINTF(8, "ignore overriding of command line option '%s'.\n", option);
 	return 1;
@@ -420,7 +420,7 @@ int reconfigure_analyse_cmdline_option(const char *option, char *value){
 /*===========================================================*/
 /* WARNING: the value[i] can be changed inside this function */
 /*===========================================================*/
-int reconfigure_parse_auth_option(char *value[], int count){
+static int reconfigure_parse_auth_option(char *value[], int count){
     char	*comp = "", *share = "";
     char	*domain = "", *user, *password;
     int		user_pos = 0;
@@ -457,7 +457,7 @@ int reconfigure_parse_auth_option(char *value[], int count){
     return (auth_store_auth_data(comp, share, domain, user, password) == 0);
 }
 
-int reconfigure_parse_stat_workaround_name_option(char *value[], int count){
+static int reconfigure_parse_stat_workaround_name_option(char *value[], int count){
     const char	*case_ptn	= "case_sensitive=";
     const char	*depth_ptn	= "depth=";
     int		case_sensitive	= -1;
@@ -486,7 +486,7 @@ int reconfigure_parse_stat_workaround_name_option(char *value[], int count){
     return stat_workaround_add_name(value[0], case_sensitive, depth);
 }
 
-int reconfigure_parse_host_option(char *value[], int count){
+static int reconfigure_parse_host_option(char *value[], int count){
     const char	*group_ptn	= "parent_group=";
     const char	*visible_ptn	= "visible=";
     const char	*parent_group	= NULL;
@@ -519,7 +519,7 @@ int reconfigure_parse_host_option(char *value[], int count){
 			visibility, SMBITEM_USER_TREE) == 0);
 }
 
-int reconfigure_parse_link_option(char *value[], int count){
+static int reconfigure_parse_link_option(char *value[], int count){
     char	*name;
     int		result;
 
@@ -548,13 +548,13 @@ int reconfigure_parse_link_option(char *value[], int count){
     return result;
 }
 
-int reconfigure_parse_group_option(char *value[], int count){
+static int reconfigure_parse_group_option(char *value[], int count){
     if (count != 1) return 0;
     if (strchr(value[0], '/') != NULL) return 0;
     return (smbitem_mkgroup(value[0], SMBITEM_USER_TREE) == 0);
 }
 
-int reconfigure_read_config_file(const char *filename, int flags){
+static int reconfigure_read_config_file(const char *filename, int flags){
     FILE	*file;
     int		cnt, ok_permission;
     char	s[LINE_SIZE];
@@ -581,7 +581,7 @@ int reconfigure_read_config_file(const char *filename, int flags){
 	arg[cnt]     = fields[cnt];
 	arg_len[cnt] = LINE_SIZE;
     }
-    snprintf(pattern, sizeof(pattern), "%%%d[^\n]\n", (int) sizeof(s) - 1);
+    snprintf(pattern, sizeof(pattern), "%%%zd[^\n]\n", sizeof(s) - 1);
 
     DPRINTF(7, "reading file: %s\n", filename);
     if ((file = fopen(filename, "r")) == NULL){

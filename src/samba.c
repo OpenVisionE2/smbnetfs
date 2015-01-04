@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <glib.h>
 
 #include "list.h"
 #include "smb_conn.h"
@@ -20,11 +21,11 @@ struct samba_ctx{
 #define smb_conn_ctx_to_samba_ctx(ptr)	\
     (struct samba_ctx *)((char*)(ptr) - offsetof(struct samba_ctx, smb_ctx))
 
-size_t		samba_max_rw_block_size	= (48 * 1024);
-int		samba_ctx_count		= 0;
-int		samba_ctx_max_count	= 15;
-LIST		samba_ctx_list		= STATIC_LIST_INITIALIZER(samba_ctx_list);
-pthread_mutex_t	m_samba			= PTHREAD_MUTEX_INITIALIZER;
+static size_t		samba_max_rw_block_size	= (48 * 1024);
+static int		samba_ctx_count		= 0;
+static int		samba_ctx_max_count	= 15;
+static LIST		samba_ctx_list		= STATIC_LIST_INITIALIZER(samba_ctx_list);
+static pthread_mutex_t	m_samba			= PTHREAD_MUTEX_INITIALIZER;
 
 
 int samba_init(size_t max_rw_block_size){
@@ -35,17 +36,17 @@ int samba_init(size_t max_rw_block_size){
     if (max_rw_block_size == 0) max_rw_block_size = page_size;
 
     samba_max_rw_block_size = max_rw_block_size;
-    DPRINTF(7, "max_rw_block_size=%d\n", (int) samba_max_rw_block_size);
+    DPRINTF(7, "max_rw_block_size=%zd\n", samba_max_rw_block_size);
     return 1;
 }
 
-void samba_set_context_name(struct samba_ctx *ctx, const char *name, size_t len){
+static void samba_set_context_name(struct samba_ctx *ctx, const char *name, size_t len){
     if (len >= sizeof(ctx->name)) len = sizeof(ctx->name) - 1;
     if (len > 0) strncpy(ctx->name, name, len);
     ctx->name[len] = '\0';
 }
 
-struct samba_ctx * samba_add_new_context(const char *name, size_t len){
+static struct samba_ctx * samba_add_new_context(const char *name, size_t len){
     struct samba_ctx	*ctx;
 
     ctx = malloc(sizeof(struct samba_ctx));
@@ -61,7 +62,7 @@ struct samba_ctx * samba_add_new_context(const char *name, size_t len){
     return ctx;
 }
 
-int samba_try_to_remove_context(struct samba_ctx *ctx){
+static int samba_try_to_remove_context(struct samba_ctx *ctx){
     if (ctx->ref_count != 0) return -1;
     if (smb_conn_ctx_destroy(&ctx->smb_ctx) != 0) return -1;
     samba_ctx_count--;
@@ -69,7 +70,7 @@ int samba_try_to_remove_context(struct samba_ctx *ctx){
     return 0;
 }
 
-struct samba_ctx * samba_find_by_name(const char *name, size_t len){
+static struct samba_ctx * samba_find_by_name(const char *name, size_t len){
     struct samba_ctx	*ctx;
     LIST		*elem;
 
@@ -84,7 +85,7 @@ struct samba_ctx * samba_find_by_name(const char *name, size_t len){
     return NULL;
 }
 
-struct samba_ctx * samba_find_oldest(void){
+static struct samba_ctx * samba_find_oldest(void){
     /* our list is sorted by the usage time, so the last element is oldest */
     LIST *elem = last_list_elem(&samba_ctx_list);
     if (is_valid_list_elem(&samba_ctx_list, elem))
@@ -92,7 +93,7 @@ struct samba_ctx * samba_find_oldest(void){
     return NULL;
 }
 
-const char* samba_get_context_status_string(void){
+static const char* samba_get_context_status_string(void){
     static char		buffer[4096];
     LIST		*elem;
     int			ret;
@@ -130,13 +131,13 @@ const char* samba_get_context_status_string(void){
 
 /* our list is sorted by the usage time, so touching is equivalent */
 /* to the moving of element to the top of the list */
-inline void samba_touch_ctx_without_lock(struct samba_ctx *ctx){
+static inline void samba_touch_ctx_without_lock(struct samba_ctx *ctx){
     remove_from_list(&samba_ctx_list, &ctx->entries);
     add_to_list(&samba_ctx_list, &ctx->entries);
 }
 
 /* the same as above, but with locking */
-void samba_touch_ctx(struct samba_ctx *ctx){
+static void samba_touch_ctx(struct samba_ctx *ctx){
     pthread_mutex_lock(&m_samba);
     samba_touch_ctx_without_lock(ctx);
     pthread_mutex_unlock(&m_samba);
@@ -145,27 +146,20 @@ void samba_touch_ctx(struct samba_ctx *ctx){
 int samba_set_max_ctx_count(int count){
     if (count < 3) return 0;
     DPRINTF(7, "count=%d\n", count);
-    pthread_mutex_lock(&m_samba);
-    samba_ctx_max_count = count;
-    pthread_mutex_unlock(&m_samba);
+    g_atomic_int_set(&samba_ctx_max_count, count);
     return 1;
 }
 
-int samba_get_max_ctx_count(void){
-    int		count;
-
-    pthread_mutex_lock(&m_samba);
-    count = samba_ctx_max_count;
-    pthread_mutex_unlock(&m_samba);
-    DPRINTF(7, "count=%d\n", count);
-    return count;
+static inline int samba_get_max_ctx_count(void){
+    return g_atomic_int_get(&samba_ctx_max_count);
 }
+
 
 void samba_allocate_ctxs(void){
     struct samba_ctx	*ctx;
 
     pthread_mutex_lock(&m_samba);
-    while(samba_ctx_count < samba_ctx_max_count){
+    while(samba_ctx_count < samba_get_max_ctx_count()){
 	if ((ctx = samba_add_new_context("", 0)) == NULL) break;
     }
     pthread_mutex_unlock(&m_samba);
@@ -187,7 +181,7 @@ void samba_destroy_unused_ctxs(void){
     pthread_mutex_unlock(&m_samba);
 }
 
-struct samba_ctx * samba_get_ctx(const char *url){
+static struct samba_ctx * samba_get_ctx(const char *url){
     size_t		len;
     struct samba_ctx	*ctx;
 
@@ -198,7 +192,7 @@ struct samba_ctx * samba_get_ctx(const char *url){
 
     pthread_mutex_lock(&m_samba);
     if ((ctx = samba_find_by_name(url, len)) != NULL) goto exist;
-    if (samba_ctx_count < samba_ctx_max_count)
+    if (samba_ctx_count < samba_get_max_ctx_count())
 	if ((ctx = samba_add_new_context(url, len)) != NULL) goto exist;
     if ((ctx = samba_find_oldest()) == NULL) goto shit_happens;
 
@@ -217,12 +211,12 @@ struct samba_ctx * samba_get_ctx(const char *url){
     return ctx;
 }
 
-void samba_release_ctx(struct samba_ctx *ctx){
+static void samba_release_ctx(struct samba_ctx *ctx){
     pthread_mutex_lock(&m_samba);
     DPRINTF(6, "ctx->name=%s[%d]\n", ctx->name, ctx->ref_count);
     if (ctx->ref_count > 0){
 	ctx->ref_count--;
-	if ((samba_ctx_count > samba_ctx_max_count) && (ctx->ref_count == 0))
+	if ((samba_ctx_count > samba_get_max_ctx_count()) && (ctx->ref_count == 0))
 	    samba_try_to_remove_context(ctx);
     }else{
 	DPRINTF(0, "WARNING! trying to release an unused context!\n");

@@ -43,17 +43,17 @@ struct req_data{
 #define REQ_TIMEOUT(source)	(&G_STRUCT_MEMBER(struct req_timeout, source, sizeof(GSource)))
 
 
-int				max_req_timeout	 = 500;	/* in milliseconds */
-enum gnome_keyring_status	gnome_keyring	 = GNOME_KEYRING_NOT_AVAILABLE;
-pthread_mutex_t			m_auth_gnome	 = PTHREAD_MUTEX_INITIALIZER;
-static GMainLoop		*loop		 = NULL;
-static struct req_timeout	*req_timeout	 = NULL;
-static GSourceFuncs		req_timeout_func = {
-				    .prepare  = req_timeout_prepare,
-				    .check    = req_timeout_check,
-				    .dispatch = req_timeout_dispatch,
-				    .finalize = req_timeout_finalize
-				};
+static int				max_req_timeout	 = 500;	/* in milliseconds */
+static enum gnome_keyring_status	gnome_keyring	 = GNOME_KEYRING_NOT_AVAILABLE;
+static pthread_mutex_t			m_auth_gnome	 = PTHREAD_MUTEX_INITIALIZER;
+static GMainLoop			*loop		 = NULL;
+static struct req_timeout		*req_timeout	 = NULL;
+static GSourceFuncs			req_timeout_func = {
+					    .prepare  = req_timeout_prepare,
+					    .check    = req_timeout_check,
+					    .dispatch = req_timeout_dispatch,
+					    .finalize = req_timeout_finalize
+					};
 
 
 static gboolean req_timeout_prepare(GSource *source, gint *timeout){
@@ -152,10 +152,10 @@ void gnome_keyring_done(void){
 }
 
 int gnome_keyring_set_request_timeout(int timeout){
-    pthread_mutex_lock(&m_auth_gnome);
-    if (timeout > 0) max_req_timeout = timeout;
-    pthread_mutex_unlock(&m_auth_gnome);
-    return (timeout > 0) ? 1 : 0;
+    if (timeout <= 0) return 0;
+    DPRINTF(7, "max_req_timeout=%d\n", timeout);
+    g_atomic_int_set(&max_req_timeout, timeout);
+    return 1;
 }
 
 int gnome_keyring_enable(int state){
@@ -177,7 +177,7 @@ int gnome_keyring_enable(int state){
     return ret;
 }
 
-struct gnome_keyring_authinfo * gnome_keyring_update_authinfo(
+static struct gnome_keyring_authinfo * gnome_keyring_update_authinfo(
 					struct gnome_keyring_authinfo *info,
 					const char *domain,
 					const char *user,
@@ -213,7 +213,7 @@ void gnome_keyring_free_authinfo(struct gnome_keyring_authinfo* info){
     free(info);
 }
 
-void gnome_keyring_get_list_callback(GnomeKeyringResult result, GList *list, gpointer data){
+static void gnome_keyring_get_list_callback(GnomeKeyringResult result, GList *list, gpointer data){
     GList		*elem;
     struct req_data	*req = (struct req_data*) data;
 
@@ -311,7 +311,7 @@ struct gnome_keyring_authinfo * gnome_keyring_get_authinfo(
 	goto end;
     }
 
-    request_timeout_init(req_timeout, max_req_timeout);
+    request_timeout_init(req_timeout, g_atomic_int_get(&max_req_timeout));
     request = gnome_keyring_find_network_password(
 		NULL,     /* user          */
 		NULL,     /* domain        */
@@ -339,6 +339,5 @@ struct gnome_keyring_authinfo * gnome_keyring_get_authinfo(
     pthread_mutex_unlock(&m_auth_gnome);
     return req_data.info;
 }
-
 
 #endif /* HAVE_GNOME_KEYRING */

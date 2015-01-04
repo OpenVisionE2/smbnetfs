@@ -10,10 +10,10 @@ struct trees{
     struct smbitem	*user;
 };
 
-struct trees	trees			= { NULL, NULL };
-pthread_mutex_t m_smbitem		= PTHREAD_MUTEX_INITIALIZER;
+static struct trees	trees			= { NULL, NULL };
+static pthread_mutex_t m_smbitem		= PTHREAD_MUTEX_INITIALIZER;
 
-struct smbitem* smbitem_new_host(const char *name, int is_hidden){
+static struct smbitem* smbitem_new_host(const char *name, int is_hidden){
     struct smbitem	*item;
 
     item = malloc(sizeof(struct smbitem) + strlen(name) + 1);
@@ -29,7 +29,7 @@ struct smbitem* smbitem_new_host(const char *name, int is_hidden){
     return item;
 }
 
-struct smbitem* smbitem_new_group(const char *name){
+static struct smbitem* smbitem_new_group(const char *name){
     struct smbitem	*item;
 
     item = malloc(sizeof(struct smbitem) + strlen(name) + 1);
@@ -44,7 +44,7 @@ struct smbitem* smbitem_new_group(const char *name){
     return item;
 }
 
-struct smbitem* smbitem_new_link(const char *name, const char *linkpath){
+static struct smbitem* smbitem_new_link(const char *name, const char *linkpath){
     struct smbitem	*item;
 
     item = (struct smbitem*) malloc(sizeof(struct smbitem) +
@@ -100,7 +100,7 @@ static void smbitem_release_item(struct smbitem *item){
     }
 }
 
-void smbitem_delete_obsolete_items(struct smbitem *group, time_t threshold){
+static void smbitem_delete_obsolete_items(struct smbitem *group, time_t threshold){
     int		i;
 
     for(i = group->child_cnt - 1; i >= 0; i--){
@@ -129,7 +129,7 @@ void smbitem_delete_obsolete_items(struct smbitem *group, time_t threshold){
  *   b) negative value -(pos+1), if item was not found,
  *      where 'pos' is the position to insert the new element
  */
-int smbitem_find_in_group_wl(struct smbitem *group, const char *name,
+static int smbitem_find_in_group_wl(struct smbitem *group, const char *name,
 				size_t name_len, int first){
     int	last = group->child_cnt - 1;
 
@@ -145,7 +145,7 @@ int smbitem_find_in_group_wl(struct smbitem *group, const char *name,
     return -(first + 1);
 }
 
-inline int smbitem_find_in_group(struct smbitem *group, const char *name, int first){
+static inline int smbitem_find_in_group(struct smbitem *group, const char *name, int first){
     return smbitem_find_in_group_wl(group, name, strlen(name), first);
 }
 
@@ -157,7 +157,7 @@ inline int smbitem_find_in_group(struct smbitem *group, const char *name, int fi
  *   a) zero, if no errors
  *   b) (-1), if insertion failed
  */
-int smbitem_insert_to_group(struct smbitem *group, struct smbitem *item, int pos){
+static int smbitem_insert_to_group(struct smbitem *group, struct smbitem *item, int pos){
     if ((pos > group->child_cnt) || (pos < 0)) return -1;
 
     if (group->max_child_cnt == group->child_cnt){
@@ -532,7 +532,7 @@ void smbitem_delete_obsolete(time_t threshold, enum smbitem_tree_t tree){
     pthread_mutex_unlock(&m_smbitem);
 }
 
-inline const char * smbitem_get_path_end(const char *path){
+static inline const char * smbitem_get_path_end(const char *path){
     const char *next = strchr(path, '/');
     return (next != NULL) ? next : path + strlen(path);
 }

@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#include <glib.h>
+
 #include "list.h"
 #include "common.h"
 #include "smbitem.h"
@@ -31,48 +33,52 @@ struct stat_workaround_exception{
 	char	path[1];	// exception path
 };
 
-struct stat_workaround_predefined	stat_workaround_predefined_list[] = {
-						{ 1, 3, ".directory" },
-						{ 1, 3, ".git" },
-						{ 1, 3, "HEAD" },
-						{ 0, 3, "desktop.ini" },
-						{ 1, 1, "autorun.inf" },
-						{ 1, 1, ".xdg-volume-info" },
-						{ 0, 0, NULL }
-					};
+static struct stat_workaround_predefined	stat_workaround_predefined_list[] = {
+							{ 1, 3, ".directory" },
+							{ 1, 3, ".git" },
+							{ 1, 3, "HEAD" },
+							{ 0, 3, "desktop.ini" },
+							{ 1, 1, "autorun.inf" },
+							{ 1, 1, ".xdg-volume-info" },
+							{ 0, 0, NULL }
+						};
 
-int		stat_workaround_default_entries	= 1;
-int		stat_workaround_default_depth	= 3;
-LIST		stat_workaround_list		= STATIC_LIST_INITIALIZER(stat_workaround_list);
-LIST		stat_workaround_exception_list	= STATIC_LIST_INITIALIZER(stat_workaround_exception_list);
-pthread_mutex_t m_stat_workaround		= PTHREAD_MUTEX_INITIALIZER;
+static int		stat_workaround_default_entries	= 1;
+static int		stat_workaround_default_depth	= 3;
+static LIST		stat_workaround_list		= STATIC_LIST_INITIALIZER(stat_workaround_list);
+static LIST		stat_workaround_exception_list	= STATIC_LIST_INITIALIZER(stat_workaround_exception_list);
+static pthread_mutex_t m_stat_workaround		= PTHREAD_MUTEX_INITIALIZER;
 
 
 int stat_workaround_enable_default_entries(int new_status){
     DPRINTF(7, "new_status=%s\n", new_status ? "true" : "false");
-    pthread_mutex_lock(&m_stat_workaround);
-    stat_workaround_default_entries = new_status;
-    pthread_mutex_unlock(&m_stat_workaround);
+    g_atomic_int_set(&stat_workaround_default_entries, new_status);
     return 1;
+}
+
+static inline int stat_workaround_is_default_entries_enabled(void){
+    return g_atomic_int_get(&stat_workaround_default_entries);
 }
 
 int stat_workaround_set_default_depth(int depth){
     if (depth < -1) return 0;
     DPRINTF(7, "depth=%d\n", depth);
-    pthread_mutex_lock(&m_stat_workaround);
-    stat_workaround_default_depth = depth;
-    pthread_mutex_unlock(&m_stat_workaround);
+    g_atomic_int_set(&stat_workaround_default_depth, depth);
     return 1;
 }
 
-int stat_workaround_add_name_internal(const char *name, int case_sensitive, int depth){
+static inline int stat_workaround_get_default_depth(void){
+    return g_atomic_int_get(&stat_workaround_default_depth);
+}
+
+static int stat_workaround_add_name_internal(const char *name, int case_sensitive, int depth){
     LIST				*elem;
     struct stat_workaround		*workaround;
 
     DPRINTF(6, "name=%s, case_sensitive=%d, depth=%d\n",
 	name, case_sensitive, depth);
 
-    if (depth < -1) depth = stat_workaround_default_depth;
+    if (depth < -1) depth = stat_workaround_get_default_depth();
 
     elem = first_list_elem(&stat_workaround_list);
     while(is_valid_list_elem(&stat_workaround_list, elem)){
@@ -108,7 +114,7 @@ int stat_workaround_add_name(const char *name, int case_sensitive, int depth){
 /********************************************************************
  * WARNING: stat_workaround_exception_list is sorted alphabetically *
  ********************************************************************/
-int stat_workaround_add_exception_internal_low(const char *path, size_t len, int depth){
+static int stat_workaround_add_exception_internal_low(const char *path, size_t len, int depth){
     LIST				*elem;
     struct stat_workaround_exception	*exception;
     int					result = 1;
@@ -137,7 +143,7 @@ int stat_workaround_add_exception_internal_low(const char *path, size_t len, int
     return 1;
 }
 
-int stat_workaround_add_exception_internal(const char *path){
+static int stat_workaround_add_exception_internal(const char *path){
     size_t	pos;
     int		depth;
 
@@ -181,7 +187,7 @@ void stat_workaround_add_default_entries(void){
     struct stat_workaround_predefined	*elem;
 
     pthread_mutex_lock(&m_stat_workaround);
-    if (stat_workaround_default_entries){
+    if (stat_workaround_is_default_entries_enabled()){
 	for(elem = stat_workaround_predefined_list; elem->name != NULL; elem++)
 	    stat_workaround_add_name_internal(elem->name,
 		elem->case_sensitive, elem->depth);
@@ -225,7 +231,7 @@ void stat_workaround_delete_obsolete(time_t threshold){
     pthread_mutex_unlock(&m_stat_workaround);
 }
 
-int stat_workaround_check_path(const char *path, int min_depth){
+static int stat_workaround_check_path(const char *path, int min_depth){
     LIST			*elem;
     struct stat_workaround	*workaround;
     const char			*path_start, *path_end;
@@ -283,8 +289,8 @@ int stat_workaround_is_name_ignored(const char *path){
 	min_len = (len <= exception->len) ? len : exception->len;
 	ret = strncmp(exception->path, path, min_len);
 
-	DPRINTF(7, "exception->path=%s, min_len=%d, ret=%d\n",
-			exception->path, (int) min_len, ret);
+	DPRINTF(7, "exception->path=%s, min_len=%zd, ret=%d\n",
+			exception->path, min_len, ret);
 
 	if (ret == 0){
 	    if (min_len == len){

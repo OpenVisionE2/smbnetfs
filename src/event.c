@@ -5,6 +5,7 @@
 #include <pthread.h>
 #include <libsmbclient.h>
 #include <fuse/fuse.h>
+#include <glib.h>
 
 #include "common.h"
 #include "smbitem.h"
@@ -14,128 +15,108 @@
 #include "stat_workaround.h"
 #include "reconfigure.h"
 
-int		event_query_browser_flag	= 1;
-int		event_time_step			= 10;
-int		event_smb_tree_scan_period	= 300;
-int		event_smb_tree_elements_ttl	= 900;
-int		event_config_update_period	= 300;
+static int		event_query_browser_flag	= 1;
+static int		event_time_step			= 10;
+static int		event_smb_tree_scan_period	= 300;
+static int		event_smb_tree_elements_ttl	= 900;
+static int		event_config_update_period	= 300;
 
-time_t		event_last_smb_tree_scan	= (time_t) 0;
-time_t		event_last_config_update	= (time_t) 0;
+static time_t		event_last_smb_tree_scan	= (time_t) 0;
+static time_t		event_last_config_update	= (time_t) 0;
 
-pthread_mutex_t	m_evthread			= PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t	m_evthread			= PTHREAD_MUTEX_INITIALIZER;
 
-pthread_t	event_ev_thread_id;
-pthread_t	event_smb_thread_id;
+static pthread_t	event_ev_thread_id;
+static pthread_t	event_smb_thread_id;
 
 int event_set_query_browser_flag(int flag){
     DPRINTF(7, "flag=%d\n", flag);
-    pthread_mutex_lock(&m_evthread);
-    event_query_browser_flag = flag;
-    pthread_mutex_unlock(&m_evthread);
+    g_atomic_int_set(&event_query_browser_flag, flag);
     return 1;
 }
 
-int event_get_query_browser_flag(void){
-    int flag;
-
-    pthread_mutex_lock(&m_evthread);
-    flag = event_query_browser_flag;
-    pthread_mutex_unlock(&m_evthread);
-    DPRINTF(7, "flag=%d\n", flag);
-    return flag;
+static inline int event_get_query_browser_flag(void){
+    return g_atomic_int_get(&event_query_browser_flag);
 }
 
 int event_set_time_step(int step){
     if (step < 1) return 0;
     DPRINTF(7, "step=%d\n", step);
-    pthread_mutex_lock(&m_evthread);
-    event_time_step = step;
-    pthread_mutex_unlock(&m_evthread);
+    g_atomic_int_set(&event_time_step, step);
     return 1;
 }
 
-int event_get_time_step(void){
-    int step;
-
-    pthread_mutex_lock(&m_evthread);
-    step = event_time_step;
-    pthread_mutex_unlock(&m_evthread);
-    DPRINTF(7, "step=%d\n", step);
-    return step;
-}
-
-int event_set_smb_tree_elements_ttl(int ttl){
-    DPRINTF(7, "ttl=%d\n", ttl);
-    pthread_mutex_lock(&m_evthread);
-    if (ttl < event_smb_tree_scan_period) ttl = -1;
-    else event_smb_tree_elements_ttl = ttl;
-    pthread_mutex_unlock(&m_evthread);
-    return (ttl > 0) ? 1 : 0;
-}
-
-int event_get_smb_tree_elements_ttl(void){
-    int ttl;
-
-    pthread_mutex_lock(&m_evthread);
-    ttl = event_smb_tree_elements_ttl;
-    pthread_mutex_unlock(&m_evthread);
-    DPRINTF(7, "ttl=%d\n", ttl);
-    return ttl;
+static inline int event_get_time_step(void){
+    return g_atomic_int_get(&event_time_step);
 }
 
 int event_set_smb_tree_scan_period(int period){
+    if (period < event_get_time_step()) return 0;
     DPRINTF(7, "period=%d\n", period);
-    pthread_mutex_lock(&m_evthread);
-    if (period < event_time_step) period = -1;
-    else event_smb_tree_scan_period = period;
-    pthread_mutex_unlock(&m_evthread);
-    return (period > 0) ? 1 : 0;
+    g_atomic_int_set(&event_smb_tree_scan_period, period);
+    return 1;
 }
 
-void event_set_last_smb_tree_scan(time_t scan_time){
+static inline int event_get_smb_tree_scan_period(void){
+    return g_atomic_int_get(&event_smb_tree_scan_period);
+}
+
+int event_set_smb_tree_elements_ttl(int ttl){
+    if (ttl < event_get_smb_tree_scan_period()) return 0;
+    DPRINTF(7, "ttl=%d\n", ttl);
+    g_atomic_int_set(&event_smb_tree_elements_ttl, ttl);
+    return 1;
+}
+
+static inline int event_get_smb_tree_elements_ttl(void){
+    return g_atomic_int_get(&event_smb_tree_elements_ttl);
+}
+
+int event_set_config_update_period(int period){
+    if ((period != 0) && (period < event_get_time_step())) return 0;
+    DPRINTF(7, "period=%d\n", period);
+    g_atomic_int_set(&event_config_update_period, period);
+    return 1;
+}
+
+static inline int event_get_config_update_period(void){
+    return g_atomic_int_get(&event_config_update_period);
+}
+
+static void event_set_last_smb_tree_scan(time_t scan_time){
     pthread_mutex_lock(&m_evthread);
     event_last_smb_tree_scan = scan_time;
     pthread_mutex_unlock(&m_evthread);
 }
 
-int event_is_time_for_smb_tree_scan(void){
+static int event_is_time_for_smb_tree_scan(void){
     int flag;
 
     pthread_mutex_lock(&m_evthread);
     flag = (time(NULL) >= event_last_smb_tree_scan +
-			  event_smb_tree_scan_period) ? 1 : 0;
+			  event_get_smb_tree_scan_period()) ? 1 : 0;
     pthread_mutex_unlock(&m_evthread);
     return flag;
 }
 
-int event_set_config_update_period(int period){
-    DPRINTF(7, "period=%d\n", period);
-    pthread_mutex_lock(&m_evthread);
-    if ((period != 0) && (period < event_time_step)) period = -1;
-    else event_config_update_period = period;
-    pthread_mutex_unlock(&m_evthread);
-    return (period >= 0) ? 1 : 0;
-}
-
-void event_set_last_config_update(time_t update_time){
+static void event_set_last_config_update(time_t update_time){
     pthread_mutex_lock(&m_evthread);
     event_last_config_update = update_time;
     pthread_mutex_unlock(&m_evthread);
 }
 
-int event_is_time_for_config_update(void){
+static int event_is_time_for_config_update(void){
     int flag;
 
     pthread_mutex_lock(&m_evthread);
-    flag = ((event_config_update_period > 0) &&
+    flag = ((event_get_config_update_period() > 0) &&
 	    (time(NULL) >= event_last_config_update +
-			  event_config_update_period)) ? 1 : 0;
+			  event_get_config_update_period())) ? 1 : 0;
     pthread_mutex_unlock(&m_evthread);
     return flag;
 }
 
-void event_scan_samba_group(const char *group){
+static void event_scan_samba_group(const char *group){
     char		buf[4096], name[256], link[256];
     int			count;
     samba_fd		fd;
@@ -169,7 +150,7 @@ void event_scan_samba_group(const char *group){
     samba_closedir(fd);
 }
 
-void event_scan_smb_root(void){
+static void event_scan_smb_root(void){
     char		buf[4096];
     int			count;
     samba_fd		fd;
@@ -212,7 +193,7 @@ void event_scan_smb_tree(void){
     smbitem_release_dir(dir);
 }
 
-void* event_update_smb_tree_thread(void *data){
+static void* event_update_smb_tree_thread(void *data){
     time_t		scan_time;
     time_t		die_threshold;
     int			time_step;
@@ -245,7 +226,7 @@ void* event_update_smb_tree_thread(void *data){
     return NULL;
 }
 
-void event_reread_config(void){
+static void event_reread_config(void){
     time_t		reread_time;
 
     reread_time = time(NULL);
@@ -258,7 +239,7 @@ void event_reread_config(void){
     event_set_last_config_update(reread_time);
 }
 
-void* event_thread(void *data){
+static void* event_thread(void *data){
     siginfo_t		siginfo;
     sigset_t		signal_set;
     time_t		start_time;

@@ -9,6 +9,7 @@
 #include <signal.h>
 #include <pthread.h>
 #include <langinfo.h>
+#include <glib.h>
 
 #include "common.h"
 #include "list.h"
@@ -23,16 +24,16 @@ struct process_rec{
     pid_t	child_pid;
 };
 
-char	process_system_charset[CHARSET_LEN]		= "UTF-8";
-char	process_server_local_charset[CHARSET_LEN]	= "UTF-8";
-char	process_server_samba_charset[CHARSET_LEN]	= "UTF-8";
-int	process_server_listen_timeout			= 300;
-int	process_server_smb_timeout			= 20000;
-int	process_server_smb_debug_level			= 0;
-int	process_start_enabled				= 1;
+static char	process_system_charset[CHARSET_LEN]		= "UTF-8";
+static char	process_server_local_charset[CHARSET_LEN]	= "UTF-8";
+static char	process_server_samba_charset[CHARSET_LEN]	= "UTF-8";
+static int	process_server_listen_timeout			= 300;
+static int	process_server_smb_timeout			= 20000;
+static int	process_server_smb_debug_level			= 0;
+static int	process_start_enabled				= 1;
 
-LIST		process_list		= STATIC_LIST_INITIALIZER(process_list);
-pthread_mutex_t	m_process		= PTHREAD_MUTEX_INITIALIZER;
+static LIST		process_list		= STATIC_LIST_INITIALIZER(process_list);
+static pthread_mutex_t	m_process		= PTHREAD_MUTEX_INITIALIZER;
 
 
 int process_init(void){
@@ -61,37 +62,32 @@ int process_init(void){
 }
 
 void process_disable_new_smb_conn_starting(void){
-    pthread_mutex_lock(&m_process);
-    process_start_enabled = 0;
-    DPRINTF(7, "disable new process starting at %u\n",
-				(unsigned int) time(NULL));
-    pthread_mutex_unlock(&m_process);
+    DPRINTF(7, "disable new process starting at %u\n", (unsigned int) time(NULL));
+    g_atomic_int_set(&process_start_enabled, 0);
+}
+
+static inline int process_is_process_start_enabled(void){
+    return g_atomic_int_get(&process_start_enabled);
 }
 
 int process_set_server_listen_timeout(int timeout){
     if (timeout < 30) return 0;
     DPRINTF(7, "timeout=%d\n", timeout);
-    pthread_mutex_lock(&m_process);
-    process_server_listen_timeout = timeout;
-    pthread_mutex_unlock(&m_process);
+    g_atomic_int_set(&process_server_listen_timeout, timeout);
     return 1;
 }
 
 int process_set_server_smb_timeout(int timeout){
     if (timeout < 1000) return 0;
     DPRINTF(7, "smb_timeout=%d\n", timeout);
-    pthread_mutex_lock(&m_process);
-    process_server_smb_timeout = timeout;
-    pthread_mutex_unlock(&m_process);
+    g_atomic_int_set(&process_server_smb_timeout, timeout);
     return 1;
 }
 
 int process_set_server_smb_debug_level(int level){
     if ((level < 0) || (level > 10)) return 0;
     DPRINTF(7, "level=%d\n", level);
-    pthread_mutex_lock(&m_process);
-    process_server_smb_debug_level = level;
-    pthread_mutex_unlock(&m_process);
+    g_atomic_int_set(&process_server_smb_debug_level, level);
     return 1;
 }
 
@@ -125,7 +121,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     pid_t		pid;
     struct process_rec	*rec;
 
-    if ((shmem_ptr == NULL) || ((int) shmem_size < getpagesize())){
+    if ((shmem_ptr == NULL) || (shmem_size < (size_t) getpagesize())){
 	errno = EINVAL;
 	return -1;
     }
@@ -133,7 +129,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     error = 0;
     pid = (pid_t) (-1);
     pthread_mutex_lock(&m_process);
-    if (process_start_enabled != 1){
+    if (!process_is_process_start_enabled()){
 	error = EPERM;
 	pair[0] = -1;
 	goto error;
@@ -177,6 +173,10 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
 	pthread_mutex_unlock(&m_process);
 	close(pair[0]);
 
+	/* We are after fork here, so we are in single thread situation. *
+	 * This mean we may read any variable without acquiring locks.   *
+	 * Moreover, we can NOT use safely any mutex protected code,     *
+	 * as the mutexes after the fork() are in UNKNOWN state          */
 	srv_ctx.conn_fd         = pair[1];
 	srv_ctx.shmem_ptr       = shmem_ptr;
 	srv_ctx.shmem_size      = shmem_size;

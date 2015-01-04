@@ -73,7 +73,7 @@ void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx,
     va_end(ap);
 }
 
-void smb_conn_srv_auth_fn(SMBCCTX *ctx,
+static void smb_conn_srv_auth_fn(SMBCCTX *ctx,
 		const char	*server,
 		const char	*share,
 		char		*wrkgrp, int wrkgrplen,
@@ -186,7 +186,7 @@ void smb_conn_srv_auth_fn(SMBCCTX *ctx,
 }
 
 #ifndef HAVE_LIBSMBCLIENT_3_2
-void smb_conn_srv_auth_fn_old(
+static void smb_conn_srv_auth_fn_old(
 		const char	*server,
 		const char	*share,
 		char		*wrkgrp, int wrkgrplen,
@@ -201,7 +201,7 @@ void smb_conn_srv_auth_fn_old(
 }
 #endif
 
-void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
+static void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     SMBCCTX	*ctx;
 
     if ((ctx = smbc_new_context()) == NULL) goto error;
@@ -274,8 +274,8 @@ void smb_conn_srv_listen(struct smb_conn_srv_ctx *ctx){
 	errno = 0;
 	query = (void*) (query_hdr + 1);
 	query_len -= sizeof(struct smb_conn_query_hdr);
-	DSRVPRINTF(ctx, 6, "process query=%d, query_len=%d\n",
-			query_hdr->query_cmd, (int) query_len);
+	DSRVPRINTF(ctx, 6, "process query=%d, query_len=%zd\n",
+			query_hdr->query_cmd, query_len);
 	switch(query_hdr->query_cmd){
 	    case OPEN:
 		smb_conn_srv_open(ctx, query, query_len);

@@ -83,11 +83,16 @@ PKG_CHECK_MODULES(FUSE, [fuse >= 2.6])
 LIBS="$LIBS $FUSE_LIBS"
 CFLAGS="$CFLAGS -D_REENTRANT -D_GNU_SOURCE -DFUSE_USE_VERSION=26 $FUSE_CFLAGS"
 
+dnl **********************
+dnl *** Tests for glib-2.0 ***
+dnl **********************
+PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.30])
+LIBS="$LIBS $GLIB_LIBS"
+CFLAGS="$CFLAGS $GLIB_CFLAGS"
 
 dnl *******************************
 dnl *** Tests for gnome-keyring ***
 dnl *******************************
-
 AC_ARG_WITH(gnome-keyring,
 	[AS_HELP_STRING(--with-gnome-keyring=@<:@no/yes@:>@,
 		use gnome-keyring as password storage @<:@default=auto@:>@)],
@@ -109,7 +114,6 @@ fi
 dnl ******************************
 dnl *** Tests for libsmbclient ***
 dnl ******************************
-
 PKG_CHECK_MODULES(SMBCLIENT, smbclient, [libsmbclient_found=yes], [libsmbclient_found=no])
 if test x"$libsmbclient_found" = xyes; then
 	AC_DEFINE(HAVE_LIBSMBCLIENT_3_2, 1, [Using Samba-3.2 api])

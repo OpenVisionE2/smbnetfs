@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <signal.h>
 #include <pthread.h>
+#include <glib.h>
 
 #include "list.h"
 #include "common.h"
@@ -36,10 +37,9 @@ struct smb_conn_query_result{
 };
 
 
-int		smb_conn_max_retry_count	= 2;
-int		smb_conn_max_passwd_query_count	= 10;
-int		smb_conn_server_reply_timeout	= 60;
-pthread_mutex_t	m_smb_conn			= PTHREAD_MUTEX_INITIALIZER;
+static int		smb_conn_max_retry_count	= 2;
+static int		smb_conn_max_passwd_query_count	= 10;
+static int		smb_conn_server_reply_timeout	= 60;
 
 
 static inline int smb_conn_query_result_map(struct smb_conn_query_result *result){
@@ -66,61 +66,37 @@ static inline int smb_conn_query_result_check(struct smb_conn_query_result *resu
 int smb_conn_set_max_retry_count(int count){
     if (count < 0) return 0;
     DPRINTF(7, "count=%d\n", count);
-    pthread_mutex_lock(&m_smb_conn);
-    smb_conn_max_retry_count = count;
-    pthread_mutex_unlock(&m_smb_conn);
+    g_atomic_int_set(&smb_conn_max_retry_count, count);
     return 1;
 }
 
-int smb_conn_get_max_retry_count(void){
-    int count;
-
-    pthread_mutex_lock(&m_smb_conn);
-    count = smb_conn_max_retry_count;
-    pthread_mutex_unlock(&m_smb_conn);
-    DPRINTF(7, "count=%d\n", count);
-    return count;
+static inline int smb_conn_get_max_retry_count(void){
+    return g_atomic_int_get(&smb_conn_max_retry_count);
 }
 
 int smb_conn_set_max_passwd_query_count(int count){
     if (count < 3) return 0;
     DPRINTF(7, "count=%d\n", count);
-    pthread_mutex_lock(&m_smb_conn);
-    smb_conn_max_passwd_query_count = count;
-    pthread_mutex_unlock(&m_smb_conn);
+    g_atomic_int_set(&smb_conn_max_passwd_query_count, count);
     return 1;
 }
 
-int smb_conn_get_max_passwd_query_count(void){
-    int count;
-
-    pthread_mutex_lock(&m_smb_conn);
-    count = smb_conn_max_passwd_query_count;
-    pthread_mutex_unlock(&m_smb_conn);
-    DPRINTF(7, "count=%d\n", count);
-    return count;
+static inline int smb_conn_get_max_passwd_query_count(void){
+    return g_atomic_int_get(&smb_conn_max_passwd_query_count);
 }
 
 int smb_conn_set_server_reply_timeout(int timeout){
     if (timeout < 10) return 0;
     DPRINTF(7, "timeout=%d\n", timeout);
-    pthread_mutex_lock(&m_smb_conn);
-    smb_conn_server_reply_timeout = timeout;
-    pthread_mutex_unlock(&m_smb_conn);
+    g_atomic_int_set(&smb_conn_server_reply_timeout, timeout);
     return 1;
 }
 
-int smb_conn_get_server_reply_timeout(void){
-    int timeout;
-
-    pthread_mutex_lock(&m_smb_conn);
-    timeout = smb_conn_server_reply_timeout;
-    pthread_mutex_unlock(&m_smb_conn);
-    DPRINTF(7, "timeout=%d\n", timeout);
-    return timeout;
+static inline int smb_conn_get_server_reply_timeout(void){
+    return g_atomic_int_get(&smb_conn_server_reply_timeout);
 }
 
-void smb_conn_connection_close(struct smb_conn_ctx *ctx){
+static void smb_conn_connection_close(struct smb_conn_ctx *ctx){
     LIST			*elem;
     struct smb_conn_file	*conn_file;
 
@@ -138,7 +114,7 @@ void smb_conn_connection_close(struct smb_conn_ctx *ctx){
     }
 }
 
-int smb_conn_up_if_broken(struct smb_conn_ctx *ctx){
+static int smb_conn_up_if_broken(struct smb_conn_ctx *ctx){
     if (ctx->conn_fd != -1){
 	if (process_is_smb_conn_alive(ctx->conn_fd)) return 0;
 	smb_conn_connection_close(ctx);
@@ -182,7 +158,7 @@ int smb_conn_ctx_destroy(struct smb_conn_ctx *ctx){
     return result;
 }
 
-int smb_conn_send_password_base(struct smb_conn_ctx *ctx, const char *domain,
+static int smb_conn_send_password_base(struct smb_conn_ctx *ctx, const char *domain,
 				const char *user, const char *password){
     ssize_t			bytes;
     struct iovec		iov[5];
@@ -219,7 +195,7 @@ int smb_conn_send_password_base(struct smb_conn_ctx *ctx, const char *domain,
     return (bytes == (ssize_t) header.query_len) ? 0 : -1;
 }
 
-int smb_conn_send_password(struct smb_conn_ctx *ctx,
+static int smb_conn_send_password(struct smb_conn_ctx *ctx,
 			const char *server, const char *share){
 
 #ifdef HAVE_GNOME_KEYRING
@@ -295,7 +271,7 @@ int smb_conn_send_password(struct smb_conn_ctx *ctx,
 #endif /* HAVE_GNOME_KEYRING */
 }
 
-int smb_conn_process_query_lowlevel_va(
+static int smb_conn_process_query_lowlevel_va(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			void *query, size_t query_len,
@@ -399,7 +375,7 @@ int smb_conn_process_query_lowlevel_va(
 	    msg = ((char *) msg_req) + msg_req->msg_offs;
 	    if (bytes != (ssize_t) (strlen(msg) + 1)) goto error;
 
-	    common_debug_print(msg_req->debug_level, "%s", msg);
+	    DEBUG_PRINT(msg_req->debug_level, "%s", msg);
 
 	    if (reply_hdr->reply_cmd == DIE_MSG){
 		result->errno_value   = reply_hdr->errno_value;
@@ -458,7 +434,7 @@ int smb_conn_process_query_lowlevel_va(
     return EIO;
 }
 
-int smb_conn_process_query_lowlevel(
+static int smb_conn_process_query_lowlevel(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			void *query, size_t query_len,
@@ -480,7 +456,7 @@ int smb_conn_process_query_lowlevel(
     return retval;
 }
 
-int smb_conn_process_query(
+static int smb_conn_process_query(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			void *query, size_t query_len,
@@ -512,7 +488,7 @@ int smb_conn_process_query(
     return EIO;
 }
 
-int smb_conn_process_fd_query(
+static int smb_conn_process_fd_query(
 			struct smb_conn_ctx *ctx,
 			enum smb_conn_cmd query_cmd,
 			struct smb_conn_file *file,
