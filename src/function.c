@@ -227,7 +227,7 @@ static int function_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		    break;
 		case SMBITEM_HOST:
 		    st.st_mode = S_IFDIR;
-		    if (! show_hidden_hosts) continue;
+		    if (!show_hidden_hosts && dir->childs[i]->is_hidden) continue;
 		    break;
 		case SMBITEM_LINK:
 		    st.st_mode = S_IFLNK;

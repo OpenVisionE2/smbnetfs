@@ -513,10 +513,10 @@ static int reconfigure_parse_host_option(char *value[], int count){
 		return 0;
 	}
     }
-    if (visibility == -1) visibility = 1;
+    if (visibility == -1) visibility = 0;
 
     return (smbitem_mkhost(value[0], parent_group,
-			visibility, SMBITEM_USER_TREE) == 0);
+			!visibility, SMBITEM_USER_TREE) == 0);
 }
 
 static int reconfigure_parse_link_option(char *value[], int count){
