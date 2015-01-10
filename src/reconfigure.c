@@ -18,6 +18,7 @@
 #include "stat_workaround.h"
 #include "function.h"
 #include "event.h"
+#include "neg_cache.h"
 #include "reconfigure.h"
 
 #define FIELD_MAX	4
@@ -58,6 +59,8 @@ const char *smbnetfs_option_list =
 	"    -o show_hidden_hosts=BOOL    See in documentation (off)\n"
 	"    -o free_space_size=N         Free space size in pages (0)\n"
 	"    -o quiet_flag=BOOL           Do not fail on chown/chgroup (on)\n"
+	"    -o neg_cache=BOOL            Enable/disable negative cache (on)\n"
+	"    -o neg_cache_timeout=T       Negative cache records expiration time (3000ms)\n"
 	"    -o stat_workaround_depth=N   konquerror and gnome terminal hack (3)\n"
 	"    -o time_step=T               Scheduler sleep interval (10s)\n"
 	"    -o config_update_period=T    Configuration update interval (300s)\n"
@@ -142,13 +145,6 @@ static int reconfigure_get_size(char *value, size_t *result){
 
     *result = strtol(value, &endptr, 0);
     if (*endptr == '\0') return 1;
-    else return 0;
-}
-
-static int reconfigure_set_size(char *value, int (*func)(size_t)){
-    size_t result;
-
-    if (reconfigure_get_size(value, &result)) return func(result);
     else return 0;
 }
 
@@ -359,6 +355,12 @@ static int reconfigure_analyse_simple_option(const char *option, char *value, in
 	return reconfigure_set_boolean(value, function_set_dollar_share_visibility);
     if (strcasecmp(option, "show_hidden_hosts") == 0)
 	return reconfigure_set_boolean(value, function_set_hidden_hosts_visibility);
+
+    /* neg_cache.h */
+    if (strcasecmp(option, "neg_cache") == 0)
+	return reconfigure_set_boolean(value, neg_cache_enable);
+    if (strcasecmp(option, "neg_cache_timeout") == 0)
+	return reconfigure_set_number(value, neg_cache_set_timeout);
 
     /* unknown option */
     return 0;

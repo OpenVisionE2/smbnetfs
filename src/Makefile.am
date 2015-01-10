@@ -9,6 +9,7 @@ smbnetfs_SOURCES = \
 	smb_conn_proto.h				\
 	smb_conn_srv.c		smb_conn_srv.h		\
 	process.c		process.h		\
+	neg_cache.c		neg_cache.h		\
 	smb_conn.c		smb_conn.h		\
 	samba.c			samba.h			\
 	stat_workaround.c	stat_workaround.h	\

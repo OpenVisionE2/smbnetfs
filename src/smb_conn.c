@@ -22,6 +22,7 @@
 #include "smb_conn_proto.h"
 #include "process.h"
 #include "smb_conn.h"
+#include "neg_cache.h"
 
 #ifndef MAP_ANONYMOUS
     #define	MAP_ANONYMOUS	MAP_ANON
@@ -466,6 +467,21 @@ static int smb_conn_process_query(
     va_list				ap;
     int					count, retval;
     struct smb_conn_query_result	result;
+    const char				*url = NULL;
+
+    if ((query_cmd >= OPEN) && (query_cmd <= REMOVEXATTR)){
+	va_start(ap, reply_len);
+	url = va_arg(ap, const char *);
+	va_end(ap);
+
+	if (url != NULL){
+	    retval = neg_cache_check(url);
+	    if (retval != 0){
+		errno = retval;
+		return retval;
+	    }
+	}
+    }
 
     for(count = 0; ; count++){
 	if (smb_conn_up_if_broken(ctx) != 0) break;
@@ -479,12 +495,17 @@ static int smb_conn_process_query(
 			reply, reply_len,
 			ap);
 	va_end(ap);
-	if ((retval == 0) && smb_conn_query_result_check(&result))
-	    return smb_conn_query_result_map(&result);
+	if ((retval == 0) && smb_conn_query_result_check(&result)){
+	    retval = smb_conn_query_result_map(&result);
+	    if ((result.process_state != SMB_CONN_PROCESS_STATE_ALIVE) && (url != NULL))
+		neg_cache_store(url, retval);
+	    return retval;
+	}
 
 	if (count >= smb_conn_get_max_retry_count()) break;
 	sleep(2);
     }
+    if (url != NULL) neg_cache_store(url, EIO);
     return EIO;
 }
 
