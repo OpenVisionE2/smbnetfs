@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <glib.h>
 
 #include "list.h"
 #include "common.h"
@@ -52,23 +51,19 @@ static pthread_mutex_t m_stat_workaround		= PTHREAD_MUTEX_INITIALIZER;
 
 int stat_workaround_enable_default_entries(int new_status){
     DPRINTF(7, "new_status=%s\n", new_status ? "true" : "false");
-    g_atomic_int_set(&stat_workaround_default_entries, new_status);
+    pthread_mutex_lock(&m_stat_workaround);
+    stat_workaround_default_entries = new_status;
+    pthread_mutex_unlock(&m_stat_workaround);
     return 1;
-}
-
-static inline int stat_workaround_is_default_entries_enabled(void){
-    return g_atomic_int_get(&stat_workaround_default_entries);
 }
 
 int stat_workaround_set_default_depth(int depth){
     if (depth < -1) return 0;
     DPRINTF(7, "depth=%d\n", depth);
-    g_atomic_int_set(&stat_workaround_default_depth, depth);
+    pthread_mutex_lock(&m_stat_workaround);
+    stat_workaround_default_depth = depth;
+    pthread_mutex_unlock(&m_stat_workaround);
     return 1;
-}
-
-static inline int stat_workaround_get_default_depth(void){
-    return g_atomic_int_get(&stat_workaround_default_depth);
 }
 
 static int stat_workaround_add_name_internal(const char *name, int case_sensitive, int depth){
@@ -78,7 +73,7 @@ static int stat_workaround_add_name_internal(const char *name, int case_sensitiv
     DPRINTF(6, "name=%s, case_sensitive=%d, depth=%d\n",
 	name, case_sensitive, depth);
 
-    if (depth < -1) depth = stat_workaround_get_default_depth();
+    if (depth < -1) depth = stat_workaround_default_depth;
 
     elem = first_list_elem(&stat_workaround_list);
     while(is_valid_list_elem(&stat_workaround_list, elem)){
@@ -187,7 +182,7 @@ void stat_workaround_add_default_entries(void){
     struct stat_workaround_predefined	*elem;
 
     pthread_mutex_lock(&m_stat_workaround);
-    if (stat_workaround_is_default_entries_enabled()){
+    if (stat_workaround_default_entries){
 	for(elem = stat_workaround_predefined_list; elem->name != NULL; elem++)
 	    stat_workaround_add_name_internal(elem->name,
 		elem->case_sensitive, elem->depth);

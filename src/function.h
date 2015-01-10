@@ -5,7 +5,7 @@
 
 extern	struct fuse_operations	smb_oper;
 
-int function_set_free_space_size(size_t blocks_count);
+int function_set_free_space_size(int blocks_count);
 int function_set_quiet_flag(int flag);
 int function_set_dollar_share_visibility(int flag);
 int function_set_hidden_hosts_visibility(int flag);

@@ -53,11 +53,12 @@ const char *smbnetfs_option_list =
 	"    -o smb_tree_scan_period=T    Period of scanning samba network tree (300s)\n"
 	"    -o smb_tree_elements_ttl=T   TTL of scanned elements in samba tree (900s)\n"
 	"    -o smb_query_browsers=BOOL   Enable/disable scanning of samba tree (on)\n"
+	"    -o smb_timeout               Samba reply timeout (20000ms)\n"
 	"    -o show_$_shares=BOOL        Enable/disable showing of hidden shares (off)\n"
 	"    -o show_hidden_hosts=BOOL    See in documentation (off)\n"
 	"    -o free_space_size=N         Free space size in pages (0)\n"
 	"    -o quiet_flag=BOOL           Do not fail on chown/chgroup (on)\n"
-	"    -o stat_workaround_depth=N   konquerror and gnome termal hack (3)\n"
+	"    -o stat_workaround_depth=N   konquerror and gnome terminal hack (3)\n"
 	"    -o time_step=T               Scheduler sleep interval (10s)\n"
 	"    -o config_update_period=T    Configuration update interval (300s)\n"
 	"    -o max_ctx_count=N           Maximum number of childs (15)\n"
@@ -351,7 +352,7 @@ static int reconfigure_analyse_simple_option(const char *option, char *value, in
 
     /* function.h */
     if (strcasecmp(option, "free_space_size") == 0)
-	return reconfigure_set_size(value, function_set_free_space_size);
+	return reconfigure_set_number(value, function_set_free_space_size);
     if (strcasecmp(option, "quiet_flag") == 0)
 	return reconfigure_set_boolean(value, function_set_quiet_flag);
     if (strcasecmp(option, "show_$_shares") == 0)

@@ -154,7 +154,9 @@ void gnome_keyring_done(void){
 int gnome_keyring_set_request_timeout(int timeout){
     if (timeout <= 0) return 0;
     DPRINTF(7, "max_req_timeout=%d\n", timeout);
-    g_atomic_int_set(&max_req_timeout, timeout);
+    pthread_mutex_lock(&m_auth_gnome);
+    max_req_timeout = timeout;
+    pthread_mutex_unlock(&m_auth_gnome);
     return 1;
 }
 
@@ -311,7 +313,7 @@ struct gnome_keyring_authinfo * gnome_keyring_get_authinfo(
 	goto end;
     }
 
-    request_timeout_init(req_timeout, g_atomic_int_get(&max_req_timeout));
+    request_timeout_init(req_timeout, max_req_timeout);
     request = gnome_keyring_find_network_password(
 		NULL,     /* user          */
 		NULL,     /* domain        */

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
-#include <glib.h>
 
 #include "list.h"
 #include "smb_conn.h"
@@ -146,20 +145,17 @@ static void samba_touch_ctx(struct samba_ctx *ctx){
 int samba_set_max_ctx_count(int count){
     if (count < 3) return 0;
     DPRINTF(7, "count=%d\n", count);
-    g_atomic_int_set(&samba_ctx_max_count, count);
+    pthread_mutex_lock(&m_samba);
+    samba_ctx_max_count = count;
+    pthread_mutex_unlock(&m_samba);
     return 1;
 }
-
-static inline int samba_get_max_ctx_count(void){
-    return g_atomic_int_get(&samba_ctx_max_count);
-}
-
 
 void samba_allocate_ctxs(void){
     struct samba_ctx	*ctx;
 
     pthread_mutex_lock(&m_samba);
-    while(samba_ctx_count < samba_get_max_ctx_count()){
+    while(samba_ctx_count < samba_ctx_max_count){
 	if ((ctx = samba_add_new_context("", 0)) == NULL) break;
     }
     pthread_mutex_unlock(&m_samba);
@@ -192,7 +188,7 @@ static struct samba_ctx * samba_get_ctx(const char *url){
 
     pthread_mutex_lock(&m_samba);
     if ((ctx = samba_find_by_name(url, len)) != NULL) goto exist;
-    if (samba_ctx_count < samba_get_max_ctx_count())
+    if (samba_ctx_count < samba_ctx_max_count)
 	if ((ctx = samba_add_new_context(url, len)) != NULL) goto exist;
     if ((ctx = samba_find_oldest()) == NULL) goto shit_happens;
 
@@ -216,7 +212,7 @@ static void samba_release_ctx(struct samba_ctx *ctx){
     DPRINTF(6, "ctx->name=%s[%d]\n", ctx->name, ctx->ref_count);
     if (ctx->ref_count > 0){
 	ctx->ref_count--;
-	if ((samba_ctx_count > samba_get_max_ctx_count()) && (ctx->ref_count == 0))
+	if ((samba_ctx_count > samba_ctx_max_count) && (ctx->ref_count == 0))
 	    samba_try_to_remove_context(ctx);
     }else{
 	DPRINTF(0, "WARNING! trying to release an unused context!\n");

@@ -53,12 +53,19 @@ static inline int event_get_time_step(void){
 int event_set_smb_tree_scan_period(int period){
     if (period < event_get_time_step()) return 0;
     DPRINTF(7, "period=%d\n", period);
-    g_atomic_int_set(&event_smb_tree_scan_period, period);
+    pthread_mutex_lock(&m_evthread);
+    event_smb_tree_scan_period = period;
+    pthread_mutex_unlock(&m_evthread);
     return 1;
 }
 
 static inline int event_get_smb_tree_scan_period(void){
-    return g_atomic_int_get(&event_smb_tree_scan_period);
+    int period;
+
+    pthread_mutex_lock(&m_evthread);
+    period = event_smb_tree_scan_period;
+    pthread_mutex_unlock(&m_evthread);
+    return period;
 }
 
 int event_set_smb_tree_elements_ttl(int ttl){
@@ -75,12 +82,10 @@ static inline int event_get_smb_tree_elements_ttl(void){
 int event_set_config_update_period(int period){
     if ((period != 0) && (period < event_get_time_step())) return 0;
     DPRINTF(7, "period=%d\n", period);
-    g_atomic_int_set(&event_config_update_period, period);
+    pthread_mutex_lock(&m_evthread);
+    event_config_update_period = period;
+    pthread_mutex_unlock(&m_evthread);
     return 1;
-}
-
-static inline int event_get_config_update_period(void){
-    return g_atomic_int_get(&event_config_update_period);
 }
 
 static void event_set_last_smb_tree_scan(time_t scan_time){
@@ -94,7 +99,7 @@ static int event_is_time_for_smb_tree_scan(void){
 
     pthread_mutex_lock(&m_evthread);
     flag = (time(NULL) >= event_last_smb_tree_scan +
-			  event_get_smb_tree_scan_period()) ? 1 : 0;
+			  event_smb_tree_scan_period) ? 1 : 0;
     pthread_mutex_unlock(&m_evthread);
     return flag;
 }
@@ -109,9 +114,9 @@ static int event_is_time_for_config_update(void){
     int flag;
 
     pthread_mutex_lock(&m_evthread);
-    flag = ((event_get_config_update_period() > 0) &&
+    flag = ((event_config_update_period > 0) &&
 	    (time(NULL) >= event_last_config_update +
-			  event_get_config_update_period())) ? 1 : 0;
+			  event_config_update_period)) ? 1 : 0;
     pthread_mutex_unlock(&m_evthread);
     return flag;
 }

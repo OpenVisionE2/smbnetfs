@@ -9,7 +9,6 @@
 #include <signal.h>
 #include <pthread.h>
 #include <langinfo.h>
-#include <glib.h>
 
 #include "common.h"
 #include "list.h"
@@ -63,31 +62,35 @@ int process_init(void){
 
 void process_disable_new_smb_conn_starting(void){
     DPRINTF(7, "disable new process starting at %u\n", (unsigned int) time(NULL));
-    g_atomic_int_set(&process_start_enabled, 0);
-}
-
-static inline int process_is_process_start_enabled(void){
-    return g_atomic_int_get(&process_start_enabled);
+    pthread_mutex_lock(&m_process);
+    process_start_enabled = 0;
+    pthread_mutex_unlock(&m_process);
 }
 
 int process_set_server_listen_timeout(int timeout){
     if (timeout < 30) return 0;
     DPRINTF(7, "timeout=%d\n", timeout);
-    g_atomic_int_set(&process_server_listen_timeout, timeout);
+    pthread_mutex_lock(&m_process);
+    process_server_listen_timeout = timeout;
+    pthread_mutex_unlock(&m_process);
     return 1;
 }
 
 int process_set_server_smb_timeout(int timeout){
     if (timeout < 1000) return 0;
     DPRINTF(7, "smb_timeout=%d\n", timeout);
-    g_atomic_int_set(&process_server_smb_timeout, timeout);
+    pthread_mutex_lock(&m_process);
+    process_server_smb_timeout = timeout;
+    pthread_mutex_unlock(&m_process);
     return 1;
 }
 
 int process_set_server_smb_debug_level(int level){
     if ((level < 0) || (level > 10)) return 0;
     DPRINTF(7, "level=%d\n", level);
-    g_atomic_int_set(&process_server_smb_debug_level, level);
+    pthread_mutex_lock(&m_process);
+    process_server_smb_debug_level = level;
+    pthread_mutex_unlock(&m_process);
     return 1;
 }
 
@@ -129,7 +132,7 @@ int process_start_new_smb_conn(char *shmem_ptr, size_t shmem_size){
     error = 0;
     pid = (pid_t) (-1);
     pthread_mutex_lock(&m_process);
-    if (!process_is_process_start_enabled()){
+    if (process_start_enabled != 1){
 	error = EPERM;
 	pair[0] = -1;
 	goto error;

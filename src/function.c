@@ -21,28 +21,20 @@
 #include "stat_workaround.h"
 #include "function.h"
 
-static size_t		function_free_space_size	= 0;
+static int		function_free_space_size	= 0;
 static int		function_quiet_flag		= 1;
 static int		function_show_dollar_shares	= 0;
 static int		function_show_hidden_hosts	= 0;
 
-static pthread_mutex_t	m_function		= PTHREAD_MUTEX_INITIALIZER;
 
-int function_set_free_space_size(size_t blocks_count){
-    DPRINTF(7, "blocks_count=%zd\n", blocks_count);
-    pthread_mutex_lock(&m_function);
-    function_free_space_size = blocks_count;
-    pthread_mutex_unlock(&m_function);
+int function_set_free_space_size(int blocks_count){
+    DPRINTF(7, "blocks_count=%d\n", blocks_count);
+    g_atomic_int_set(&function_free_space_size, blocks_count);
     return 1;
 }
 
-static size_t function_get_free_space_size(void){
-    size_t blocks_count;
-
-    pthread_mutex_lock(&m_function);
-    blocks_count = function_free_space_size;
-    pthread_mutex_unlock(&m_function);
-    return blocks_count;
+static int function_get_free_space_size(void){
+    return g_atomic_int_get(&function_free_space_size);
 }
 
 int function_set_quiet_flag(int flag){
