@@ -257,3 +257,18 @@ New in 0.5.3b (babushka)
 -----------------
   - fix compilation with samba >= 4.0
   - fix compilation warning
+
+New in 0.6.0
+-----------------
+  - stop printing warning for samba-4.x.
+  - fix long staning bug with visible flags for hosts
+  - add negative cache to speedup works with inaccessible hosts
+    (thanks to Aleksey Midenkov for the idea)
+  - allow setting of event_config_update_period to zero to disable periodic
+    configuration update (thanks to Aleksey Midenkov)
+  - allow settings of max_retry_count to zero, also remove unneeded 2 sec
+    delay after last failure (thanks to Aleksey Midenkov)
+  - add smb_timeout option (thanks to Soci/Singular for the idea)
+  - switch to atomic integer operations where it was possible
+  - improve error reporting and add timestamp to debug messages
+    (thanks to Aleksey Midenkov for the idea)
