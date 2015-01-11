@@ -54,7 +54,7 @@ const char *smbnetfs_option_list =
 	"    -o smb_tree_scan_period=T    Period of scanning samba network tree (300s)\n"
 	"    -o smb_tree_elements_ttl=T   TTL of scanned elements in samba tree (900s)\n"
 	"    -o smb_query_browsers=BOOL   Enable/disable scanning of samba tree (on)\n"
-	"    -o smb_timeout               Samba reply timeout (20000ms)\n"
+	"    -o smb_timeout=T               Samba reply timeout (20000ms)\n"
 	"    -o show_$_shares=BOOL        Enable/disable showing of hidden shares (off)\n"
 	"    -o show_hidden_hosts=BOOL    See in documentation (off)\n"
 	"    -o free_space_size=N         Free space size in pages (0)\n"
@@ -65,7 +65,7 @@ const char *smbnetfs_option_list =
 	"    -o time_step=T               Scheduler sleep interval (10s)\n"
 	"    -o config_update_period=T    Configuration update interval (300s)\n"
 	"    -o max_ctx_count=N           Maximum number of childs (15)\n"
-	"    -o max_retry_count=N         Number of retries before fail (3)\n"
+	"    -o max_retry_count=N         Number of retries before fail (2)\n"
 	"    -o listen_timeout=T          Child process inactivity timeout (300s)\n"
 	"    -o reply_timeout=T           Child process reply timeout (30s)\n"
 	"    -o max_passwd_query_count=N  See in documentation (10)\n";
