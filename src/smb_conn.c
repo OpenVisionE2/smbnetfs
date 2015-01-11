@@ -42,6 +42,27 @@ static int		smb_conn_max_retry_count	= 2;
 static int		smb_conn_max_passwd_query_count	= 10;
 static int		smb_conn_server_reply_timeout	= 60;
 
+static inline int smb_conn_is_neg_cache_candidate(enum smb_conn_cmd query_cmd,
+                                                  struct smb_conn_query_result *result){
+    if (result->process_state == SMB_CONN_PROCESS_STATE_DIED)
+	switch(result->errno_value){
+	    case ETIMEDOUT:
+	    case ECONNREFUSED:
+	    case EHOSTUNREACH:
+		return 1;
+	    case EINVAL:
+		switch(query_cmd){
+		    case OPENDIR:
+		    case STAT:
+			return 1;
+		    default:
+			break;
+		}
+	    default:
+		break;
+	}
+    return 0;
+}
 
 static inline int smb_conn_query_result_map(struct smb_conn_query_result *result){
     if (result->process_state == SMB_CONN_PROCESS_STATE_ALIVE)
@@ -49,18 +70,12 @@ static inline int smb_conn_query_result_map(struct smb_conn_query_result *result
     return EIO;
 }
 
-static inline int smb_conn_query_result_check(struct smb_conn_query_result *result){
+static inline int smb_conn_query_result_check(enum smb_conn_cmd query_cmd,
+                                              struct smb_conn_query_result *result){
     if (result->process_state == SMB_CONN_PROCESS_STATE_ALIVE)
 	return 1;
-    if (result->process_state == SMB_CONN_PROCESS_STATE_DIED)
-	switch(result->errno_value){
-	    case ETIMEDOUT:
-	    case ECONNREFUSED:
-	    case EHOSTUNREACH:
-		return 1;
-	    default:
-		break;
-	}
+    if (smb_conn_is_neg_cache_candidate(query_cmd, result))
+	return 1;
     return 0;
 }
 
@@ -495,9 +510,9 @@ static int smb_conn_process_query(
 			reply, reply_len,
 			ap);
 	va_end(ap);
-	if ((retval == 0) && smb_conn_query_result_check(&result)){
+	if ((retval == 0) && smb_conn_query_result_check(query_cmd, &result)){
 	    retval = smb_conn_query_result_map(&result);
-	    if ((result.process_state != SMB_CONN_PROCESS_STATE_ALIVE) && (url != NULL))
+	    if (smb_conn_is_neg_cache_candidate(query_cmd, &result) && (url != NULL))
 		neg_cache_store(url, retval);
 	    return retval;
 	}
@@ -562,7 +577,7 @@ static int smb_conn_process_fd_query(
 			&result,
 			&fd_reply, sizeof(fd_reply),
 			file->url, NULL);
-	    if ((retval != 0) || !smb_conn_query_result_check(&result)) goto loop_end;
+	    if ((retval != 0) || !smb_conn_query_result_check(file->reopen_cmd, &result)) goto loop_end;
 	    if (smb_conn_query_result_map(&result) != 0)
 		return smb_conn_query_result_map(&result);
 	
@@ -577,7 +592,7 @@ static int smb_conn_process_fd_query(
 			&result,
 			reply, reply_len,
 			NULL);
-	if ((retval == 0) && smb_conn_query_result_check(&result))
+	if ((retval == 0) && smb_conn_query_result_check(query_cmd, &result))
 	    return smb_conn_query_result_map(&result);
 
       loop_end:
