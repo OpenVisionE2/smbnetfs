@@ -258,7 +258,7 @@ New in 0.5.3b (babushka)
   - fix compilation with samba >= 4.0
   - fix compilation warning
 
-New in 0.6.0
+New in 0.6.0 (Abkhazia)
 -----------------
   - stop printing warning for samba-4.x.
   - fix long staning bug with visible flags for hosts
