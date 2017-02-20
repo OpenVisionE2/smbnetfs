@@ -36,18 +36,12 @@ static void check_samba_version(void){
 	exit(EXIT_FAILURE);
     }
 
-  #ifndef HAVE_LIBSMBCLIENT_3_2
-    if (major < 3) goto unsupported;
-    if ((major == 3) && (minor < 2)) goto no_truncate;
-    else goto please_recompile;
-  #else
     if (major >= 5) goto to_new;
     if (major == 4) goto ok;
     if (major == 3){
 	if (minor >= 2) goto ok;
 	else goto unsupported;
     }
-  #endif
 
   unsupported:
     fprintf(stderr, "ERROR: Unsupported libsmbclient version: %s\n"
@@ -56,25 +50,6 @@ static void check_samba_version(void){
                      samba_version);
     exit(EXIT_FAILURE);
 
-#ifndef HAVE_LIBSMBCLIENT_3_2
-  no_truncate:
-    fprintf(stderr, "WARNING: Too old libsmbclient version: %s\n"
-                    "         truncate() and ftruncate() operations are not supported."
-                    "         Please consider upgrade to libsmbclient >= 3.2\n"
-                    "\n",
-                     samba_version);
-    return;
-
-  please_recompile:
-    fprintf(stderr, "WARNING: " PACKAGE_NAME " was compiled against libsmbclient < 3.2,\n"
-                    "         thus truncate() and ftruncate() operations are not supported.\n"
-                    "         Current libsmbclient version is %s. Please recompile " PACKAGE_NAME "\n"
-                    "         to get support of truncate() and ftruncate() operations.\n"
-                    "\n",
-                    samba_version);
-    return;
-
-#else
   ok:
     /* libsmbclient >= 3.2 is perfectly OK */
     return;
@@ -86,7 +61,6 @@ static void check_samba_version(void){
                     samba_version);
     /* Hm... libsmbclient version is too new, trying to continue anyway. */
     return;
-#endif
 }
 
 static inline size_t get_default_rw_block_size(void){

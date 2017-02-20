@@ -20,7 +20,7 @@ struct samba_ctx{
 #define smb_conn_ctx_to_samba_ctx(ptr)	\
     (struct samba_ctx *)((char*)(ptr) - offsetof(struct samba_ctx, smb_ctx))
 
-static size_t		samba_max_rw_block_size	= (48 * 1024);
+static size_t		samba_max_rw_block_size	= (128 * 1024);
 static int		samba_ctx_count		= 0;
 static int		samba_ctx_max_count	= 15;
 static LIST		samba_ctx_list		= STATIC_LIST_INITIALIZER(samba_ctx_list);

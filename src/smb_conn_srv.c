@@ -15,30 +15,6 @@
 #include "smb_conn_proto.h"
 #include "smb_conn_srv.h"
 
-
-#ifndef HAVE_LIBSMBCLIENT_3_2
-    #define	smbc_setDebug(ctx, level)				\
-	((ctx)->debug = (level))
-    #define smbc_setOptionUserData(ctx, data)				\
-	smbc_option_set((ctx), "user_data", data)
-    #define smbc_getOptionUserData(ctx)					\
-	smbc_option_get((ctx), "user_data")
-    #define	smbc_setOptionUseKerberos(ctx, status)			\
-	((ctx)->flags = (status) ?					\
-		((ctx)->flags | SMB_CTX_FLAG_USE_KERBEROS) :		\
-		((ctx)->flags & ~SMB_CTX_FLAG_USE_KERBEROS))
-    #define	smbc_setOptionFallbackAfterKerberos(ctx, status)	\
-	((ctx)->flags = (status) ?					\
-		((ctx)->flags | SMB_CTX_FLAG_FALLBACK_AFTER_KERBEROS) :	\
-		((ctx)->flags & ~SMB_CTX_FLAG_FALLBACK_AFTER_KERBEROS))
-    #define	smbc_setFunctionAuthDataWithContext(ctx, ctx_auth_fn)	\
-	((ctx)->callbacks.auth_fn = (ctx_auth_fn##_old))
-    #define	smbc_ftruncate(a, b)					\
-	( errno = EINVAL, -1)
-    #define	smbc_setTimeout(ctx, timeout)	do {} while (0)
-#endif
-
-
 void smb_conn_srv_debug_print(struct smb_conn_srv_ctx *ctx,
 				enum smb_conn_cmd msg_type,
 				int errno_value,
@@ -184,22 +160,6 @@ static void smb_conn_srv_auth_fn(SMBCCTX *ctx,
     DSRVDIEMSG(srv_ctx, errno, "errno=%d, %s\n", errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
-
-#ifndef HAVE_LIBSMBCLIENT_3_2
-static void smb_conn_srv_auth_fn_old(
-		const char	*server,
-		const char	*share,
-		char		*wrkgrp, int wrkgrplen,
-		char		*user,   int userlen,
-		char		*passwd, int passwdlen){
-
-	smb_conn_srv_auth_fn(smbc_set_context(NULL),
-				server, share,
-				wrkgrp, wrkgrplen,
-				user, userlen,
-				passwd, passwdlen);
-}
-#endif
 
 static void smb_conn_srv_samba_init(struct smb_conn_srv_ctx *srv_ctx){
     SMBCCTX	*ctx;
