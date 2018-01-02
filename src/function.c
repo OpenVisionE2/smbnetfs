@@ -7,12 +7,11 @@
 #include <fcntl.h>
 #include <dirent.h>
 #include <sys/statvfs.h>
+#include <sys/types.h>
+#include <attr/xattr.h>
 #include <time.h>
 #include <pthread.h>
 #include <libsmbclient.h>
-#ifdef HAVE_SETXATTR
-  #include <sys/xattr.h>
-#endif
 #include <glib.h>
 
 #include "common.h"
