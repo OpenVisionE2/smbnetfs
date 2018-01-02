@@ -160,6 +160,7 @@ int main(int argc, char *argv[]){
     set_signal_reactions();
 
     /* init all subsystems with their default values */
+    common_init();
     reconfigure_set_default_login_and_configdir();
 #ifdef HAVE_GNOME_KEYRING
     gnome_keyring_init();

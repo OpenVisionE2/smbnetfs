@@ -17,6 +17,8 @@
 
 extern int common_debug_level;
 
+void common_init(void);
+
 int  common_set_smbnetfs_debug_level(int level);
 int  common_set_log_file(const char *logfile);
 
@@ -40,7 +42,7 @@ static inline int common_get_smbnetfs_debug_level(void){
 
 #ifdef PRINTF_DEBUG
   #include <stdio.h>
-  #define	DPRINTF(level, fmt, args...)	{ fprintf(stderr, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args); fflush(stderr); }
+  #define	DPRINTF(level, fmt, args...)	dprintf(fileno(stderr), "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
 #else
   #define	DPRINTF(level, fmt, args...)	DEBUG_PRINT(level, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
 #endif
