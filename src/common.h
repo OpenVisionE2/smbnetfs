@@ -47,8 +47,4 @@ static inline int common_get_smbnetfs_debug_level(void){
   #define	DPRINTF(level, fmt, args...)	DEBUG_PRINT(level, "%d->%s: " fmt, getpid(), __FUNCTION__, ## args)
 #endif
 
-#ifndef HAVE_STRNDUP
-  char* strndup(const char *s, size_t n);
-#endif
-
 #endif /* __COMMON_H__ */
