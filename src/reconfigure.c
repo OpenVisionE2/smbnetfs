@@ -104,7 +104,7 @@ void reconfigure_set_default_login_and_configdir(void){
     if ((user == NULL) || (*user == '\0')){
 	user = ((pwd != NULL) && 
 	        (pwd->pw_name != NULL) &&
-	        (pwd->pw_name != '\0')) ? pwd->pw_name : "anonymous";
+	        (*pwd->pw_name != '\0')) ? pwd->pw_name : "anonymous";
 	setenv("USER", user, 1);
 	setenv("LOGNAME", user, 1);
     }
