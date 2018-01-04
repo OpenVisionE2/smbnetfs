@@ -1,6 +1,1 @@
-Current restriction:
-  * truncate() and ftruncate() are not supported for libsmbclient < 3.2
-
-Opened questions:
-  * is it required to recode username/domain/password from local to samba encoding ?
-
+smbc_set_credentials smbc_thread_posix(void) smbc_setOptionUseCCache smbc_notify

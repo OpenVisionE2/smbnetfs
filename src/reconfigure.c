@@ -10,7 +10,7 @@
 
 #include "common.h"
 #include "smbitem.h"
-#include "auth-gnome-keyring.h"
+#include "auth-libsecret.h"
 #include "auth.h"
 #include "process.h"
 #include "smb_conn.h"
@@ -46,10 +46,10 @@ const char *smbnetfs_option_list =
 	"    -o log_file=PATH             File to store SMBNetFS debug messages\n"
 	"    -o local_charset=CHARSET     Local charset (autodetected)\n"
 	"    -o samba_charset=CHARSET     Charset used by samba (utf-8)\n"
-#ifdef HAVE_GNOME_KEYRING
-	"    -o use_gnome_keyring=BOOL    Enable/disable usage of gnome-keyring\n"
-	"    -o gnome_keyring_timeout=T   auth retrieving timeout for gnome_keyring (500ms)\n"
-#endif /* HAVE_GNOME_KEYRING */
+#ifdef HAVE_LIBSECRET
+	"    -o use_libsecret=BOOL        Enable/disable usage of libsecret\n"
+	"    -o libsecret_timeout=T       auth retrieving timeout for libsecrer (500ms)\n"
+#endif /* HAVE_LIBSECRET */
 	"    -o max_rw_block_size=N       Maximum size of r/w block in Kb (autodetected)\n"
 	"    -o smb_tree_scan_period=T    Period of scanning samba network tree (300s)\n"
 	"    -o smb_tree_elements_ttl=T   TTL of scanned elements in samba tree (900s)\n"
@@ -292,13 +292,13 @@ static int reconfigure_analyse_simple_option(const char *option, char *value, in
     if (strcasecmp(option, "log_file") == 0)
         return common_set_log_file(value);
 
-#ifdef HAVE_GNOME_KEYRING
-    /* auth-gnome-keyring.h */
-    if (strcasecmp(option, "use_gnome_keyring") == 0)
-	return reconfigure_set_boolean(value, gnome_keyring_enable);
-    if (strcasecmp(option, "gnome_keyring_timeout") == 0)
-	return reconfigure_set_number(value, gnome_keyring_set_request_timeout);
-#endif /* HAVE_GNOME_KEYRING */
+#ifdef HAVE_LIBSECRET
+    /* auth-libsecret.h */
+    if (strcasecmp(option, "use_libsecter") == 0)
+	return reconfigure_set_boolean(value, libsecret_enable);
+    if (strcasecmp(option, "libsecret_timeout") == 0)
+	return reconfigure_set_number(value, libsecret_set_request_timeout);
+#endif /* HAVE_LIBSECRET */
 
     /* process.h */
     if (strcasecmp(option, "listen_timeout") == 0)

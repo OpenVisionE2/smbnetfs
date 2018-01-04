@@ -1,14 +1,10 @@
-AC_INIT([SMBNetFS],[0.6.0])
+AC_INIT([SMBNetFS],[0.6.1])
 AM_INIT_AUTOMAKE
 AC_CONFIG_HEADERS([src/config.h])
 AC_PROG_CC
 
-AC_CHECK_FUNCS([setxattr])
 AC_CHECK_FUNC(backtrace_symbols_fd,
     [AC_DEFINE([HAVE_BACKTRACE], [], [Linux])]
-)
-AC_CHECK_FUNC(strndup,
-    [AC_DEFINE([HAVE_STRNDUP], [], [Linux])]
 )
 AC_CHECK_FUNC(setlocale, [found_setlocale=yes])
 if test "x$found_setlocale" != "xyes" ; then
@@ -83,32 +79,32 @@ PKG_CHECK_MODULES(FUSE, [fuse >= 2.6])
 LIBS="$LIBS $FUSE_LIBS"
 CFLAGS="$CFLAGS -D_REENTRANT -D_GNU_SOURCE -DFUSE_USE_VERSION=26 $FUSE_CFLAGS"
 
-dnl **********************
+dnl **************************
 dnl *** Tests for glib-2.0 ***
-dnl **********************
+dnl **************************
 PKG_CHECK_MODULES(GLIB, [glib-2.0 >= 2.30])
 LIBS="$LIBS $GLIB_LIBS"
 CFLAGS="$CFLAGS $GLIB_CFLAGS"
 
-dnl *******************************
-dnl *** Tests for gnome-keyring ***
-dnl *******************************
-AC_ARG_WITH(gnome-keyring,
-	[AS_HELP_STRING(--with-gnome-keyring=@<:@no/yes@:>@,
-		use gnome-keyring as password storage @<:@default=auto@:>@)],
+dnl ***************************
+dnl *** Tests for libsecret ***
+dnl ***************************
+AC_ARG_WITH(libsecret,
+	[AS_HELP_STRING(--with-libsecret=@<:@no/yes@:>@,
+		use libsecret as password storage @<:@default=auto@:>@)],
 	,
-	[with_gnome_keyring=maybe])
+	[with_libsecret=maybe])
 
-if test x"$with_gnome_keyring" != xno; then
-	PKG_CHECK_MODULES(GNOME_KEYRING, [gnome-keyring-1 >= 2.28],
-		[AC_DEFINE([HAVE_GNOME_KEYRING], [],
-			[use gnome-keyring as password storage])],
+if test x"$with_libsecret" != xno; then
+	PKG_CHECK_MODULES(LIBSECRET, [libsecret-1 >= 0.18.5],
+		[AC_DEFINE([HAVE_LIBSECRET], [],
+			[use libsecret as password storage])],
 		[# mandatory depend
-		if test x"$with_gnome_keyring" = xyes; then
-			AC_MSG_ERROR([unable to find usable gnome-keyring])
+		if test x"$with_libsecret" = xyes; then
+			AC_MSG_ERROR([unable to find usable libsecret])
 		fi])
-	LIBS="$LIBS $GNOME_KEYRING_LIBS"
-	CFLAGS="$CFLAGS $GNOME_KEYRING_CFLAGS"
+	LIBS="$LIBS $LIBSECRET_LIBS"
+	CFLAGS="$CFLAGS $LIBSECRET_CFLAGS"
 fi
 
 dnl ******************************

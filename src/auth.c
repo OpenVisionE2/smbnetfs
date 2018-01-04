@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include "list.h"
 #include "common.h"
-#include "auth-gnome-keyring.h"
+#include "auth-libsecret.h"
 #include "auth.h"
 
 struct authitem{

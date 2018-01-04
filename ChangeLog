@@ -272,3 +272,9 @@ New in 0.6.0 (Abkhazia)
   - switch to atomic integer operations where it was possible
   - improve error reporting and add timestamp to debug messages
     (thanks to Aleksey Midenkov for the idea)
+
+New in 0.6.1 (Abkhazia)
+-----------------
+  - drop old libsmbclient support, libsmbclient >= 3.5 is required
+  - use libsecret instead of deprecated libgnome-keyring
+  - use dprintf()/vdprintf() to print debug messages

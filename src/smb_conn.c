@@ -17,7 +17,7 @@
 #include "list.h"
 #include "common.h"
 #include "smbitem.h"
-#include "auth-gnome-keyring.h"
+#include "auth-libsecret.h"
 #include "auth.h"
 #include "smb_conn_proto.h"
 #include "process.h"
@@ -214,9 +214,9 @@ static int smb_conn_send_password_base(struct smb_conn_ctx *ctx, const char *dom
 static int smb_conn_send_password(struct smb_conn_ctx *ctx,
 			const char *server, const char *share){
 
-#ifdef HAVE_GNOME_KEYRING
-    struct gnome_keyring_authinfo	*gnome_keyring_info;
-#endif /* HAVE_GNOME_KEYRING */
+#ifdef HAVE_LIBSECRET
+    struct libsecret_authinfo		*libsecret_info;
+#endif /* HAVE_LIBSECRET */
     struct authinfo			*config_file_info;
     int					config_file_info_suitability;
     char				workgroup[256];
@@ -242,31 +242,30 @@ static int smb_conn_send_password(struct smb_conn_ctx *ctx,
 	config_file_info_suitability = -1;
     }
 
-#ifdef HAVE_GNOME_KEYRING
-    gnome_keyring_info = gnome_keyring_get_authinfo(
-				workgroup, server, share);
-    if ((gnome_keyring_info != NULL) &&
-	((gnome_keyring_info->domain   == NULL) ||
-	 (gnome_keyring_info->user     == NULL) ||
-	 (gnome_keyring_info->password == NULL))){
+#ifdef HAVE_LIBSECRET
+    libsecret_info = libsecret_get_authinfo(workgroup, server, share);
+    if ((libsecret_info != NULL) &&
+	((libsecret_info->domain   == NULL) ||
+	 (libsecret_info->user     == NULL) ||
+	 (libsecret_info->password == NULL))){
 
-	DPRINTF(0, "WARNING!!! Damaged gnome_keyring_info record\n");
-	gnome_keyring_free_authinfo(gnome_keyring_info);
-	gnome_keyring_info = NULL;
+	DPRINTF(0, "WARNING!!! Damaged libsecret_info record\n");
+	libsecret_free_authinfo(libsecret_info);
+	libsecret_info = NULL;
     }
 
-    if (gnome_keyring_info != NULL){
-	if (gnome_keyring_info->suitability >= config_file_info_suitability){
+    if (libsecret_info != NULL){
+	if (libsecret_info->suitability >= config_file_info_suitability){
 	    if (config_file_info != NULL)
 		auth_release_authinfo(config_file_info);
 	    config_file_info = NULL;
 	    config_file_info_suitability = -1;
-	    goto use_gnome_keyring_info;
+	    goto use_libsecret_info;
 	}
-	gnome_keyring_free_authinfo(gnome_keyring_info);
-	gnome_keyring_info = NULL;
+	libsecret_free_authinfo(libsecret_info);
+	libsecret_info = NULL;
     }
-#endif /* HAVE_GNOME_KEYRING */
+#endif /* HAVE_LIBSECRET */
 
     if (config_file_info == NULL) return -1;
     ret = smb_conn_send_password_base(ctx,
@@ -276,15 +275,15 @@ static int smb_conn_send_password(struct smb_conn_ctx *ctx,
     auth_release_authinfo(config_file_info);
     return ret;
 
-#ifdef HAVE_GNOME_KEYRING
-  use_gnome_keyring_info:
+#ifdef HAVE_LIBSECRET
+  use_libsecret_info:
     ret = smb_conn_send_password_base(ctx,
-			gnome_keyring_info->domain,
-			gnome_keyring_info->user,
-			gnome_keyring_info->password);
-    gnome_keyring_free_authinfo(gnome_keyring_info);
+			libsecret_info->domain,
+			libsecret_info->user,
+			libsecret_info->password);
+    libsecret_free_authinfo(libsecret_info);
     return ret;
-#endif /* HAVE_GNOME_KEYRING */
+#endif /* HAVE_LIBSECRET */
 }
 
 static int smb_conn_process_query_lowlevel_va(
