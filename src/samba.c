@@ -254,7 +254,7 @@ samba_fd samba_creat(const char *url, mode_t mode){
     return fd;
 }
 
-ssize_t samba_read(samba_fd fd, off_t offset, void *buf, size_t bufsize){
+ssize_t samba_read(samba_fd fd, off_t offset, char *buf, size_t bufsize){
     ssize_t	result = 0;
 
     if ((fd == NULL) || (fd->ctx == NULL)){
@@ -277,7 +277,7 @@ ssize_t samba_read(samba_fd fd, off_t offset, void *buf, size_t bufsize){
     return result;
 }
 
-ssize_t samba_write(samba_fd fd, off_t offset, void *buf, size_t bufsize){
+ssize_t samba_write(samba_fd fd, off_t offset, const char *buf, size_t bufsize){
     ssize_t	result = 0;
 
     if ((fd == NULL) || (fd->ctx == NULL)){

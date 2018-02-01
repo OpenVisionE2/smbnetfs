@@ -45,7 +45,7 @@ ssize_t smb_conn_read(struct smb_conn_ctx *ctx,
 			void *buf, size_t bufsize);
 ssize_t smb_conn_write(struct smb_conn_ctx *ctx,
 			smb_conn_fd fd, off_t offset,
-			void *buf, size_t bufsize);
+			const void *buf, size_t bufsize);
 int smb_conn_close(struct smb_conn_ctx *ctx,
 			smb_conn_fd fd);
 int smb_conn_unlink(struct smb_conn_ctx *ctx,

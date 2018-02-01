@@ -629,8 +629,7 @@ smb_conn_fd smb_conn_open(struct smb_conn_ctx *ctx,
     query.flags    = flags;
 
     pthread_mutex_lock(&ctx->mutex);
-    ctx->access_time = time(NULL);
-    file->access_time = time(NULL);
+    ctx->access_time = file->access_time = time(NULL);
     error = smb_conn_process_query(
 			ctx, OPEN,
 			&query, sizeof(query),
@@ -675,8 +674,7 @@ smb_conn_fd smb_conn_creat(struct smb_conn_ctx *ctx,
     query.mode     = mode;
 
     pthread_mutex_lock(&ctx->mutex);
-    ctx->access_time = time(NULL);
-    file->access_time = time(NULL);
+    ctx->access_time = file->access_time = time(NULL);
     error = smb_conn_process_query(
 			ctx, CREAT,
 			&query, sizeof(query),
@@ -718,8 +716,7 @@ ssize_t smb_conn_read(struct smb_conn_ctx *ctx,
 
     pthread_mutex_lock(&ctx->mutex);
     if ((file->reopen_cmd == OPEN) && (file->ctx == ctx)){
-	ctx->access_time = time(NULL);
-	file->access_time = time(NULL);
+	ctx->access_time = file->access_time = time(NULL);
 	error = smb_conn_process_fd_query(
 			ctx, READ, file,
 			&query.srv_fd,
@@ -739,7 +736,7 @@ ssize_t smb_conn_read(struct smb_conn_ctx *ctx,
 
 ssize_t smb_conn_write(struct smb_conn_ctx *ctx,
 			smb_conn_fd fd, off_t offset,
-			void *buf, size_t bufsize){
+			const void *buf, size_t bufsize){
 
     int					error;
     struct smb_conn_file		*file;
@@ -761,8 +758,7 @@ ssize_t smb_conn_write(struct smb_conn_ctx *ctx,
 
     pthread_mutex_lock(&ctx->mutex);
     if ((file->reopen_cmd == OPEN) && (file->ctx == ctx)){
-	ctx->access_time = time(NULL);
-	file->access_time = time(NULL);
+	ctx->access_time = file->access_time = time(NULL);
 	memcpy(ctx->shmem_ptr, buf, bufsize);
 	msync(ctx->shmem_ptr, bufsize, MS_SYNC);
 	error = smb_conn_process_fd_query(
@@ -885,8 +881,7 @@ smb_conn_fd smb_conn_opendir(struct smb_conn_ctx *ctx,
     query.url_offs = sizeof(struct smb_conn_url_query);
 
     pthread_mutex_lock(&ctx->mutex);
-    ctx->access_time = time(NULL);
-    file->access_time = time(NULL);
+    ctx->access_time = file->access_time = time(NULL);
     error = smb_conn_process_query(
 			ctx, OPENDIR,
 			&query, sizeof(query),
@@ -963,8 +958,7 @@ ssize_t smb_conn_readdir(struct smb_conn_ctx *ctx,
 
     pthread_mutex_lock(&ctx->mutex);
     if ((file->reopen_cmd == OPENDIR) && (file->ctx == ctx)){
-	ctx->access_time = time(NULL);
-	file->access_time = time(NULL);
+	ctx->access_time = file->access_time = time(NULL);
 
 	/* we cant reopen directory with non-zero offset, so use               */
 	/* file->reopen_flags for indication of zero/non-zero directory offset */
@@ -1103,8 +1097,7 @@ int smb_conn_fstat(struct smb_conn_ctx *ctx,
 
     pthread_mutex_lock(&ctx->mutex);
     if ((file->reopen_cmd == OPEN) && (file->ctx == ctx)){
-	ctx->access_time = time(NULL);
-	file->access_time = time(NULL);
+	ctx->access_time = file->access_time = time(NULL);
 	error = smb_conn_process_fd_query(
 			ctx, FSTAT, file,
 			&query.srv_fd,
@@ -1140,8 +1133,7 @@ int smb_conn_ftruncate(struct smb_conn_ctx *ctx,
 
     pthread_mutex_lock(&ctx->mutex);
     if ((file->reopen_cmd == OPEN) && (file->ctx == ctx)){
-	ctx->access_time = time(NULL);
-	file->access_time = time(NULL);
+	ctx->access_time = file->access_time = time(NULL);
 	error = smb_conn_process_fd_query(
 			ctx, FTRUNCATE, file,
 			&query.srv_fd,

@@ -15,8 +15,8 @@ void     samba_destroy_unused_ctxs(void);
 
 samba_fd samba_open       (const char *url, int flags, mode_t mode);
 samba_fd samba_creat      (const char *url, mode_t mode);
-ssize_t  samba_read       (samba_fd fd, off_t offset, void *buf, size_t bufsize);
-ssize_t  samba_write      (samba_fd fd, off_t offset, void *buf, size_t bufsize);
+ssize_t  samba_read       (samba_fd fd, off_t offset, char *buf, size_t bufsize);
+ssize_t  samba_write      (samba_fd fd, off_t offset, const char *buf, size_t bufsize);
 int      samba_close      (samba_fd fd);
 int      samba_unlink     (const char *url);
 int      samba_rename     (const char *old_url, const char *new_url);
